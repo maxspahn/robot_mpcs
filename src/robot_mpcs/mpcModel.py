@@ -2,6 +2,8 @@ import casadi as ca
 import numpy as np
 import forcespro
 import yaml
+from shutil import move
+from glob import glob
 
 
 def diagSX(val, size):
@@ -207,11 +209,14 @@ class MpcModel(object):
             self._codeoptions.printlevel = 0
             self._codeoptions.optlevel = 3
 
-    def generateSolver(self):
+    def generateSolver(self, location="./"):
         _ = self._model.generate_solver(self._codeoptions)
         with open(self._solverName + '/paramMap.yaml', 'w') as outfile:
             yaml.dump(self._paramMap, outfile, default_flow_style=False)
         properties = {"nx": self._nx, "nu": self._nu, "npar": self._npar, "ns": self._ns}
         with open(self._solverName + '/properties.yaml', 'w') as outfile:
             yaml.dump(properties, outfile, default_flow_style=False)
+        move(self._solverName, location + self._solverName)
+        for file in glob(r'*.forces'):
+            move(file, location)
 

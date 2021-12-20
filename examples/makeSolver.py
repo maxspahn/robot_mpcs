@@ -9,7 +9,7 @@ def main():
     mpcModel.setModel()
     solverName = "solver_n2_05_H10_noSlack"
     mpcModel.setCodeoptions(solverName, debug=True)
-    mpcModel.generateSolver()
+    mpcModel.generateSolver(location="./solvers/")
 
 
 if __name__ == "__main__":

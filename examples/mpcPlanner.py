@@ -43,7 +43,8 @@ class MPCPlanner(object):
         """
         dt_str = str(self.dt()).replace(".", "")
         self._solverFile = (
-            path_name
+            path_name 
+            + 'solvers/'
             + "solver_n"
             + str(self.n())
             + "_"
