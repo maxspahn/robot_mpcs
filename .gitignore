@@ -1,0 +1,4 @@
+__pycache__/
+*.forces
+*.swp
+*.egg-info
