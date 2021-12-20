@@ -11,7 +11,7 @@ import os
 from forwardKinematics.fksCommon.fk_creator import FkCreator
 from fabricsExperiments.generic.mpc.parameterMap import getParameterMap
 
-slack = True
+slack = False
 n = 2
 m = 2
 dt = 0.01
