@@ -11,7 +11,7 @@ import os
 from forwardKinematics.fksCommon.fk_creator import FkCreator
 from fabricsExperiments.generic.mpc.parameterMap import getParameterMap
 
-slack = False
+slack = True
 n = 2
 m = 2
 dt = 0.01
@@ -192,6 +192,7 @@ def main():
     model.continuous_dynamics = continuous_dynamics
     model.objective = eval_obj
     E1 = np.concatenate([np.eye(nx), np.zeros((nx, nu + ns))], axis=1)
+    __import__('pdb').set_trace()
     # E2 = np.concatenate((E1, np.zeros((1, nx + nu))))
     model.E = E1
     model.lb = np.concatenate((xl, ul))

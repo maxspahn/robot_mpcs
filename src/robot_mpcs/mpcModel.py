@@ -156,7 +156,7 @@ class MpcModel(object):
 
     def continuous_dynamics(self, x, u):
         qdot = x[self._n : self._nx]
-        qddot = u[self._ns : self._n + self._ns]
+        qddot = u[-self._nu:]
         acc = ca.vertcat(qdot, qddot)
         return acc
 
@@ -174,10 +174,10 @@ class MpcModel(object):
         self._model.E = E
         if self._ns > 0:
             self._model.lb = np.concatenate(
-                (self._limits["x"]["low"], self._limits["u"]["low"], self._limits["s"]["low"])
+                (self._limits["x"]["low"], self._limits["s"]["low"], self._limits["u"]["low"])
             )
             self._model.ub = np.concatenate(
-                (self._limits["x"]["high"], self._limits["u"]["high"], self._limits["s"]["high"])
+                (self._limits["x"]["high"], self._limits["s"]["high"], self._limits["u"]["high"])
             )
         else:
             self._model.lb = np.concatenate(
