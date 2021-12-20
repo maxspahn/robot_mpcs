@@ -214,10 +214,12 @@ class MPCPlanner(object):
 
     def shiftHorizon(self, output, ob):
         for key in output.keys():
-            if self.H() > 99:
-                stage = int(key[-3:])
-            else:
+            if self.H() < 10:
+                stage = int(key[-1:])
+            elif self.H() >= 10 and self.H() < 100:
                 stage = int(key[-2:])
+            elif self.H() >= 100:
+                stage = int(key[-3:])
             if stage == 1:
                 continue
             self._x0[stage - 2, 0 : len(output[key])] = output[key]
@@ -262,10 +264,12 @@ class MPCPlanner(object):
         output, exitflag, info = self._solver.solve(problem)
         if exitflag < 0:
             print(exitflag)
-        if self.H() > 99:
-            key1 = 'x001'
-        else:
+        if self.H() < 10:
+            key1 = 'x1'
+        elif self.H() >= 10 and self.H() < 100:
             key1 = 'x01'
+        elif self.H() >= 100:
+            key1 = 'x001'
         action = output[key1][-self._nu :]
         if self.useSlack():
             self._slack = output[key1][self._nx]
@@ -294,7 +298,12 @@ if __name__ == "__main__":
     myMPCPlanner = MPCPlanner(None, test_setup)
     myMPCPlanner.concretize()
     myMPCPlanner.reset()
-    myMPCPlanner.setObstacles([], 0)
+    limits = np.array([[-5, -5], [5, 5]])
+    myMPCPlanner.setJointLimits(limits)
     q = np.array([0.5, 1.0])
-    qdot = np.array([0.0, 0.2])
-    myMPCPlanner.computeAction(q, qdot)
+    qdot = np.array([0.1, 0.2])
+    for i in range(200):
+        action = myMPCPlanner.computeAction(q, qdot)
+        qdot += action * myMPCPlanner.dt()
+        q += qdot * myMPCPlanner.dt()
+        print(f"q : {q} \t, qdot : {qdot}\t, action : {action}")

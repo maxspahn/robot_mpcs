@@ -1,8 +1,8 @@
 type: mpc
 n: 2
 dt: 0.5
-H: 10
-interval: 10
+H: 2
+interval: 1
 weights:
   wx: 3.0
   wvel: 1.0
@@ -11,4 +11,4 @@ weights:
   wobst: 0.05
 obst:
   nbObst: 5
-slack: False
+slack: True
