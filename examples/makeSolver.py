@@ -6,11 +6,11 @@ from robotmpcs.planarArmMpcModel import PlanarArmMpcModel
 
 def main():
     N = 2
-    n = 5
+    n = 2
     m = 2
     dt = 0.5
     mpcModel = PlanarArmMpcModel(m, N, n)
-    #mpcModel = PointRobotMpcModel(m, N)
+    mpcModel = PointRobotMpcModel(m, N)
     mpcModel.setDt(dt)
     mpcModel.setSlack()
     mpcModel.setObstacles(0, 2)

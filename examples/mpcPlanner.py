@@ -8,11 +8,7 @@ import forcespro
 import robotmpcs
 
 
-path_name = (
-    os.path.dirname(os.path.realpath(robotmpcs.__file__))
-    + "/../examples/"
-)
-sys.path.append(path_name)
+path_name = os.path.dirname(os.path.realpath(__file__)) + '/'
 
 
 class EmptyObstacle():
@@ -293,7 +289,7 @@ class MPCPlanner(object):
         return self._action
 
 def main():
-    test_setup = os.path.dirname(os.path.realpath(__file__)) + "/config/planarArmMpc.yaml"
+    test_setup = os.path.dirname(os.path.realpath(__file__)) + "/config/pointRobotMpc.yaml"
     myMPCPlanner = MPCPlanner(None, test_setup)
     myMPCPlanner.concretize()
     myMPCPlanner.reset()
