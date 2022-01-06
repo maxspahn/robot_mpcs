@@ -13,8 +13,16 @@ poetry shell
 ```
 Now you are in the virtual environment with everything installed.
 
-## Install using pip
+## Install globally using pip
 ```bash
 pip install .
 ```
 
+## Examples
+```
+cd examples
+python3 makeSolver.py
+python3 mpcPlanner.py
+```
+
+This is a minimal example using a point robot.
