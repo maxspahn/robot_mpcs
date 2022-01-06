@@ -5,12 +5,12 @@ import sys
 import forcespro
 
 
-import robot_mpcs
+import robotmpcs
 
 
 path_name = (
-    os.path.dirname(os.path.realpath(robot_mpcs.__file__))
-    + "/../../examples/"
+    os.path.dirname(os.path.realpath(robotmpcs.__file__))
+    + "/../examples/"
 )
 sys.path.append(path_name)
 
@@ -292,18 +292,22 @@ class MPCPlanner(object):
             self._actionCounter += 1
         return self._action
 
-
-if __name__ == "__main__":
-    test_setup = "config/mpcPlanner.yaml"
+def main():
+    test_setup = os.path.dirname(os.path.realpath(__file__)) + "/config/planarArmMpc.yaml"
     myMPCPlanner = MPCPlanner(None, test_setup)
     myMPCPlanner.concretize()
     myMPCPlanner.reset()
-    limits = np.array([[-5, -5], [5, 5]])
+    n = myMPCPlanner.n()
+    limits = np.array([[-5, ] * n, [5, ] * n])
     myMPCPlanner.setJointLimits(limits)
-    q = np.array([0.5, 1.0])
-    qdot = np.array([0.1, 0.2])
+    q = np.random.random(n)
+    qdot = np.random.random(n)
     for i in range(200):
         action = myMPCPlanner.computeAction(q, qdot)
         qdot += action * myMPCPlanner.dt()
         q += qdot * myMPCPlanner.dt()
         print(f"q : {q} \t, qdot : {qdot}\t, action : {action}")
+
+
+if __name__ == "__main__":
+    main()

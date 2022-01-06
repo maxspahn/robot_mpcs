@@ -1,5 +1,5 @@
-from robot_mpcs.mpcModel import MpcModel
-from forwardKinematics.fksCommon.fk_creator import FkCreator
+from robotmpcs.mpcModel import MpcModel
+from forwardkinematics.fksCommon.fk_creator import FkCreator
 
 
 class PlanarArmMpcModel(MpcModel):
