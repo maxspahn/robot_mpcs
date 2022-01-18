@@ -41,7 +41,7 @@ class MPCPlanner(object):
         self._solverFile = (
             path_name 
             + 'solvers/'
-            + "solver_n"
+            + "diffDrive_solver_n"
             + str(self.n())
             + "_"
             + dt_str
@@ -289,7 +289,7 @@ class MPCPlanner(object):
         return self._action
 
 def main():
-    test_setup = os.path.dirname(os.path.realpath(__file__)) + "/config/pointRobotMpc.yaml"
+    test_setup = os.path.dirname(os.path.realpath(__file__)) + "/config/diffDriveMpc.yaml"
     myMPCPlanner = MPCPlanner(None, test_setup)
     myMPCPlanner.concretize()
     myMPCPlanner.reset()
