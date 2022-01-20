@@ -78,6 +78,14 @@ pytest = ">=6.2.5,<7.0.0"
 urdf_parser_py = ">=0.0.3"
 
 [[package]]
+name = "geomdl"
+version = "5.3.1"
+description = "Object-oriented B-Spline and NURBS evaluation library"
+category = "main"
+optional = true
+python-versions = "*"
+
+[[package]]
 name = "gym"
 version = "0.21.0"
 description = "Gym: A universal API for reinforcement learning environments."
@@ -148,6 +156,21 @@ cssselect = ["cssselect (>=0.7)"]
 html5 = ["html5lib"]
 htmlsoup = ["beautifulsoup4"]
 source = ["Cython (>=0.29.7)"]
+
+[[package]]
+name = "motion-planning-scenes"
+version = "0.1.0"
+description = "Generic motion planning scenes, including goals and obstacles."
+category = "main"
+optional = true
+python-versions = ">=3.6,<4.0"
+
+[package.dependencies]
+casadi = "<=3.5.5"
+geomdl = ">=5.3.1,<6.0.0"
+numpy = ">=1.15.0,<2.0.0"
+pytest = ">=6.2.5,<7.0.0"
+PyYAML = ">=6.0,<7.0"
 
 [[package]]
 name = "numpy"
@@ -360,12 +383,12 @@ docs = ["sphinx", "jaraco.packaging (>=8.2)", "rst.linker (>=1.9)"]
 testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.0.1)", "jaraco.itertools", "func-timeout", "pytest-black (>=0.3.7)", "pytest-mypy"]
 
 [extras]
-agents = ["planarenvs"]
+agents = ["planarenvs", "motion-planning-scenes"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7,<3.11"
-content-hash = "bf81c1bfbbfa9c7c57352503a32ca024e47631a1a3100fe055ac5bffc628577b"
+content-hash = "e21b712c70852c9642d4442fa27e4a6c8e09447bc325f830bafea11670bb7223"
 
 [metadata.files]
 atomicwrites = [
@@ -435,6 +458,10 @@ colorama = [
 forwardkinematics = [
     {file = "forwardkinematics-0.5.0-py3-none-any.whl", hash = "sha256:6d36f4a62d04cf0f9df666925255175fcf8edc7ff98febb529c7e350c96598fe"},
     {file = "forwardkinematics-0.5.0.tar.gz", hash = "sha256:415325c3458bef26b53775219bde2e6a9068ab85dded800bfd2a6887c12978b5"},
+]
+geomdl = [
+    {file = "geomdl-5.3.1-py2.py3-none-any.whl", hash = "sha256:0f36a4bacde5b218c73aadc69ff152e7f7fb3aa7260df0e6647a701a5351d76a"},
+    {file = "geomdl-5.3.1.tar.gz", hash = "sha256:e81a31b4d5f111267b16045ba1d9539235a98b2cff5e4bad18f7ddcd4cb804c8"},
 ]
 gym = [
     {file = "gym-0.21.0.tar.gz", hash = "sha256:0fd1ce165c754b4017e37a617b097c032b8c3feb8a0394ccc8777c7c50dddff3"},
@@ -512,6 +539,10 @@ lxml = [
     {file = "lxml-4.7.1-pp38-pypy38_pp73-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_24_i686.whl", hash = "sha256:8e54945dd2eeb50925500957c7c579df3cd07c29db7810b83cf30495d79af267"},
     {file = "lxml-4.7.1-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_24_x86_64.whl", hash = "sha256:447d5009d6b5447b2f237395d0018901dcc673f7d9f82ba26c1b9f9c3b444b60"},
     {file = "lxml-4.7.1.tar.gz", hash = "sha256:a1613838aa6b89af4ba10a0f3a972836128801ed008078f8c1244e65958f1b24"},
+]
+motion-planning-scenes = [
+    {file = "motion_planning_scenes-0.1.0-py3-none-any.whl", hash = "sha256:f99ec9109816530dff8408fefc4fb94dd4be8781df6f2a68c2387c3c9bdd2fe5"},
+    {file = "motion_planning_scenes-0.1.0.tar.gz", hash = "sha256:8c28450e656925e3a40e29547c351e739170d655f3a52dcba394b3783c3c7b0b"},
 ]
 numpy = [
     {file = "numpy-1.21.5-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:301e408a052fdcda5cdcf03021ebafc3c6ea093021bf9d1aa47c54d48bdad166"},

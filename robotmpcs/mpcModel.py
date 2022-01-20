@@ -75,11 +75,11 @@ class MpcModel(object):
         wvel = p[self._paramMap["wvel"]]
         g = p[self._paramMap["g"]]
         W = diagSX(w, self._m)
-        Wvel = diagSX(wvel, self._n)
+        Wvel = diagSX(wvel, self._nu)
         fk_ee = self._fk.fk(q, self._n, positionOnly=True)
+        Jvel = ca.dot(qdot, ca.mtimes(Wvel, qdot))
         err = fk_ee - g
         Jx = ca.dot(err, ca.mtimes(W, err))
-        Jvel = ca.dot(qdot, ca.mtimes(Wvel, qdot))
         Jobst = 0
         Js = 0
         if self._obstaclesInCosts:

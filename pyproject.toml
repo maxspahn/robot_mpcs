@@ -12,11 +12,12 @@ requests = "^2.27.1"
 pyaml = "^21.10.1"
 forwardkinematics = "^0.5"
 planarenvs = {git = "ssh://git@github.com/maxspahn/gym_envs_planar.git", rev = "ft-clean-build", optional = true}
+motion-planning-scenes = {version = "^0.1.0", optional = true}
 
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.extras]
-agents = ["planarenvs"]
+agents = ["planarenvs", "motion-planning-scenes"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
