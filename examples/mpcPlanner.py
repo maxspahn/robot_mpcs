@@ -3,6 +3,8 @@ import yaml
 import os
 import sys
 import forcespro
+import gym
+import planarenvs.groundRobots
 
 
 import robotmpcs
@@ -26,9 +28,8 @@ class PlannerSettingIncomplete(Exception):
 
 
 class MPCPlanner(object):
-    def __init__(self, exp, setupFile):
+    def __init__(self, setupFile):
         required_keys = ["type", "n", "obst", "weights", "interval", "H", "dt"]
-        self._exp = exp
         self._required_keys = required_keys
         self._setupFile = setupFile
         self.parseSetup()
@@ -41,7 +42,7 @@ class MPCPlanner(object):
         self._solverFile = (
             path_name 
             + 'solvers/'
-            + "diffDrive_solver_n"
+            + "diffDrive_n"
             + str(self.n())
             + "_"
             + dt_str
@@ -100,7 +101,7 @@ class MPCPlanner(object):
         for i in range(self.H()):
             self._params[
                 [self._npar * i + val for val in self._paramMap["w"]]
-            ] = self.weights()["wx"]
+            ] = self.weights()["w"]
             self._params[
                 [self._npar * i + val for val in self._paramMap["wvel"]]
             ] = self.weights()["wvel"]
@@ -198,12 +199,9 @@ class MPCPlanner(object):
                 ] = limits[1][j]
 
     def setGoal(self, goal):
-        if len(goal.subGoals()) > 1:
-            print("WARNING: Only single goal supported in mpc")
-        primeGoal = goal.primeGoal()
         for i in range(self.H()):
             for j in range(self.m()):
-                self._params[self._npar * i + self._paramMap["g"][j]] = primeGoal.position()[j]
+                self._params[self._npar * i + self._paramMap["g"][j]] = goal[j]
 
     def concretize(self):
         pass
@@ -289,20 +287,26 @@ class MPCPlanner(object):
         return self._action
 
 def main():
-    test_setup = os.path.dirname(os.path.realpath(__file__)) + "/config/diffDriveMpc.yaml"
-    myMPCPlanner = MPCPlanner(None, test_setup)
+    test_setup = os.path.dirname(os.path.realpath(__file__)) + "/" + sys.argv[1]
+    myMPCPlanner = MPCPlanner(test_setup)
     myMPCPlanner.concretize()
     myMPCPlanner.reset()
+    myMPCPlanner.setGoal([-2.0, -2.0])
+    env = gym.make('ground-robot-vel-v0', render=True, dt=myMPCPlanner.dt())
     n = myMPCPlanner.n()
     limits = np.array([[-5, ] * n, [5, ] * n])
     myMPCPlanner.setJointLimits(limits)
-    q = np.random.random(n)
-    qdot = np.random.random(n)
+    q0 = np.random.random(n)
+    vel0 = np.random.random(myMPCPlanner._nx - 2 * n)
+    ob = env.reset(pos=q0, vel=vel0)
+
     for i in range(200):
-        action = myMPCPlanner.computeAction(q, qdot)
-        qdot += action * myMPCPlanner.dt()
-        q += qdot * myMPCPlanner.dt()
-        print(f"q : {q} \t, qdot : {qdot}\t, action : {action}")
+        q = ob['x']
+        qdot = ob['xdot']
+        vel = ob['vel']
+        action = myMPCPlanner.computeAction(q, qdot, vel)
+        ob, *_ = env.step(action)
+        print(f"ob : {ob}")
 
 
 if __name__ == "__main__":
