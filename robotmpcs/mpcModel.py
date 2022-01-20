@@ -202,7 +202,15 @@ class MpcModel(object):
         self._model.ineq = self.eval_inequalities
         self._model.xinitidx = range(0, self._nx)
 
-    def setCodeoptions(self, solverName, debug=False):
+    def setCodeoptions(self, **kwargs):
+        debug = False
+        solverName = self._modelName + "_n" + str(self._n) + "_" + str(self._dt).replace('.','') + "_H" + str(self._N)
+        if self._ns == 0:
+            solverName += "_noSlack"
+        if debug in kwargs:
+            debug = kwargs.get('debug')
+        if solverName in kwargs:
+            solverName = kwargs.get('solverName')
         self._solverName = solverName
         self._codeoptions = forcespro.CodeOptions(solverName)
         self._codeoptions.nlp.integrator.type = "ERK2"

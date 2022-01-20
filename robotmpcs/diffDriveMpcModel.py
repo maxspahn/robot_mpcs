@@ -18,6 +18,7 @@ class DiffDriveMpcModel(MpcModel):
         }
         self._fk = FkCreator('groundRobot', n).fk()
         self.initParamMap()
+        self._modelName = "diffDrive"
 
     def extractVariables(self, z):
         q = z[0: self._n]
