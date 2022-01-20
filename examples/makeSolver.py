@@ -1,8 +1,8 @@
 import os
 
-from robotmpcs.pointRobotMpcModel import PointRobotMpcModel
-from robotmpcs.planarArmMpcModel import PlanarArmMpcModel
-from robotmpcs.diffDriveMpcModel import DiffDriveMpcModel
+from robotmpcs.models.pointRobotMpcModel import PointRobotMpcModel
+from robotmpcs.models.planarArmMpcModel import PlanarArmMpcModel
+from robotmpcs.models.diffDriveMpcModel import DiffDriveMpcModel
 
 
 def main():

@@ -1,4 +1,4 @@
-from robotmpcs.mpcModel import MpcModel
+from robotmpcs.models.mpcModel import MpcModel
 from forwardkinematics.fksCommon.fk_creator import FkCreator
 
 

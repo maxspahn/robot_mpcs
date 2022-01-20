@@ -1,4 +1,4 @@
-from robotmpcs.mpcModel import MpcModel, diagSX
+from robotmpcs.models.mpcModel import MpcModel, diagSX
 from forwardkinematics.fksCommon.fk_creator import FkCreator
 import casadi as ca
 import numpy as np
