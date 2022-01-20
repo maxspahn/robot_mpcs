@@ -23,7 +23,7 @@ envMap = {
 obst1Dict = {
     "dim": 2,
     "type": "sphere",
-    "geometry": {"position": [0.0, -0.2], "radius": 1.0},
+    "geometry": {"position": [1.5, -0.2], "radius": 0.7},
 }
 sphereObst1 = SphereObstacle(name="simpleSphere", contentDict=obst1Dict)
 
@@ -329,7 +329,7 @@ def main():
     n = myMPCPlanner.n()
     staticGoalDict = {
         "m": 2, "w": 1.0, "prime": True, 'indices': [0, 1], 'parent_link': 0, 'child_link': n,
-        'desired_position': [2, -5], 'epsilon': 0.2, 'type': "staticSubGoal", 
+        'desired_position': [2, -3], 'epsilon': 0.2, 'type': "staticSubGoal", 
     }
     staticGoal = StaticSubGoal(name="goal1", contentDict=staticGoalDict)
     myMPCPlanner.setObstacles([sphereObst1], 0.5)
@@ -340,7 +340,7 @@ def main():
         env = gym.make(envName, render=True, dt=myMPCPlanner.dt(), n=myMPCPlanner.n())
     limits = np.array([[-50, ] * n, [50, ] * n])
     myMPCPlanner.setJointLimits(limits)
-    q0 = np.array([-3.0, 1.2, 0.0])
+    q0 = np.random.random(n)
     ob = env.reset(pos=q0)
     env.addObstacle(sphereObst1)
     env.addGoal(staticGoal)
@@ -351,7 +351,6 @@ def main():
         if robotType == 'diffDrive':
             vel = ob['vel']
             action = myMPCPlanner.computeAction(q, qdot, vel)
-            print(action)
         else:
             action = myMPCPlanner.computeAction(q, qdot)
         ob, *_ = env.step(action)

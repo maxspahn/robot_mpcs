@@ -13,21 +13,25 @@ Consider adding it to your `.bashrc` (`.zshrc`) file
 Then you can install this package using [poetry](https://python-poetry.org/docs/) within a
 virtual environment.
 ```bash
-poetry install
+poetry install -E agents
 poetry shell
 ```
 Now you are in the virtual environment with everything installed.
 
 ## Install globally using pip
 ```bash
-pip install .
+pip3 install .
+```
+If you want to test the mpc solvers you need to install additional dependencies.
+```bash
+pip3 install '.[agents]'
 ```
 
 ## Examples
 ```
 cd examples
 python3 makeSolver.py
-python3 mpcPlanner.py
+python3 mpcPlanner.py <path/to/config/file>
 ```
 
 This is a minimal example using a point robot.
