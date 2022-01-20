@@ -3,12 +3,39 @@ import yaml
 import os
 import sys
 import forcespro
-
-
+import gym
+import planarenvs.groundRobots
+import planarenvs.pointRobot
+import planarenvs.nLinkReacher
+import re
+from MotionPlanningEnv.sphereObstacle import SphereObstacle
+from MotionPlanningGoal.staticSubGoal import StaticSubGoal
 import robotmpcs
 
 
+
 path_name = os.path.dirname(os.path.realpath(__file__)) + '/'
+envMap = {
+    'planarArm': 'nLink-reacher-acc-v0', 
+    'diffDrive': 'ground-robot-acc-v0', 
+    'pointRobot': 'point-robot-acc-v0', 
+}
+obst1Dict = {
+    "dim": 2,
+    "type": "sphere",
+    "geometry": {"position": [1.5, -0.2], "radius": 0.7},
+}
+sphereObst1 = SphereObstacle(name="simpleSphere", contentDict=obst1Dict)
+
+
+
+class SolverDoesNotExistError(Exception):
+    def __init__(self, solverName):
+        super().__init__()
+        self._solverName = solverName
+
+    def __str__(self):
+        return f"Solver with name {self._solverName} does not exist."
 
 
 class EmptyObstacle():
@@ -26,11 +53,11 @@ class PlannerSettingIncomplete(Exception):
 
 
 class MPCPlanner(object):
-    def __init__(self, exp, setupFile):
+    def __init__(self, setupFile, robotType):
         required_keys = ["type", "n", "obst", "weights", "interval", "H", "dt"]
-        self._exp = exp
         self._required_keys = required_keys
         self._setupFile = setupFile
+        self._robotType = robotType
         self.parseSetup()
         """
         self._paramMap, self._npar, self._nx, self._nu, self._ns = getParameterMap(
@@ -41,8 +68,8 @@ class MPCPlanner(object):
         self._solverFile = (
             path_name 
             + 'solvers/'
-            + "solver_n"
-            + str(self.n())
+            + self._robotType
+            + "_n" + str(self.n())
             + "_"
             + dt_str
             + "_H"
@@ -50,6 +77,8 @@ class MPCPlanner(object):
         )
         if not self.useSlack():
             self._solverFile += "_noSlack"
+        if not os.path.isdir(self._solverFile):
+            raise(SolverDoesNotExistError(self._solverFile))
         with open(self._solverFile + "/paramMap.yaml", "r") as stream:
             try:
                 self._paramMap = yaml.safe_load(stream)
@@ -100,7 +129,7 @@ class MPCPlanner(object):
         for i in range(self.H()):
             self._params[
                 [self._npar * i + val for val in self._paramMap["w"]]
-            ] = self.weights()["wx"]
+            ] = self.weights()["w"]
             self._params[
                 [self._npar * i + val for val in self._paramMap["wvel"]]
             ] = self.weights()["wvel"]
@@ -198,12 +227,9 @@ class MPCPlanner(object):
                 ] = limits[1][j]
 
     def setGoal(self, goal):
-        if len(goal.subGoals()) > 1:
-            print("WARNING: Only single goal supported in mpc")
-        primeGoal = goal.primeGoal()
         for i in range(self.H()):
             for j in range(self.m()):
-                self._params[self._npar * i + self._paramMap["g"][j]] = primeGoal.position()[j]
+                self._params[self._npar * i + self._paramMap["g"][j]] = goal.position()[j]
 
     def concretize(self):
         pass
@@ -289,20 +315,45 @@ class MPCPlanner(object):
         return self._action
 
 def main():
-    test_setup = os.path.dirname(os.path.realpath(__file__)) + "/config/pointRobotMpc.yaml"
-    myMPCPlanner = MPCPlanner(None, test_setup)
+    test_setup = os.path.dirname(os.path.realpath(__file__)) + "/" + sys.argv[1]
+    robotType = re.findall('\/(\S*)M', sys.argv[1])[0]
+    envName = envMap[robotType]
+    try:
+        myMPCPlanner = MPCPlanner(test_setup, robotType)
+    except SolverDoesNotExistError as e:
+        print(e)
+        print("Consider creating it with makeSolver.py")
+        return
     myMPCPlanner.concretize()
     myMPCPlanner.reset()
     n = myMPCPlanner.n()
-    limits = np.array([[-5, ] * n, [5, ] * n])
+    staticGoalDict = {
+        "m": 2, "w": 1.0, "prime": True, 'indices': [0, 1], 'parent_link': 0, 'child_link': n,
+        'desired_position': [2, -3], 'epsilon': 0.2, 'type': "staticSubGoal", 
+    }
+    staticGoal = StaticSubGoal(name="goal1", contentDict=staticGoalDict)
+    myMPCPlanner.setObstacles([sphereObst1], 0.5)
+    myMPCPlanner.setGoal(staticGoal)
+    if robotType == 'diffDrive':
+        env = gym.make(envName, render=True, dt=myMPCPlanner.dt())
+    else:
+        env = gym.make(envName, render=True, dt=myMPCPlanner.dt(), n=myMPCPlanner.n())
+    limits = np.array([[-50, ] * n, [50, ] * n])
     myMPCPlanner.setJointLimits(limits)
-    q = np.random.random(n)
-    qdot = np.random.random(n)
-    for i in range(200):
-        action = myMPCPlanner.computeAction(q, qdot)
-        qdot += action * myMPCPlanner.dt()
-        q += qdot * myMPCPlanner.dt()
-        print(f"q : {q} \t, qdot : {qdot}\t, action : {action}")
+    q0 = np.random.random(n)
+    ob = env.reset(pos=q0)
+    env.addObstacle(sphereObst1)
+    env.addGoal(staticGoal)
+    n_steps = 1000
+    for i in range(n_steps):
+        q = ob['x']
+        qdot = ob['xdot']
+        if robotType == 'diffDrive':
+            vel = ob['vel']
+            action = myMPCPlanner.computeAction(q, qdot, vel)
+        else:
+            action = myMPCPlanner.computeAction(q, qdot)
+        ob, *_ = env.step(action)
 
 
 if __name__ == "__main__":

@@ -2,21 +2,21 @@ import os
 
 from robotmpcs.pointRobotMpcModel import PointRobotMpcModel
 from robotmpcs.planarArmMpcModel import PlanarArmMpcModel
+from robotmpcs.diffDriveMpcModel import DiffDriveMpcModel
 
 
 def main():
-    N = 2
-    n = 2
+    N = 10
     m = 2
-    dt = 0.5
-    mpcModel = PlanarArmMpcModel(m, N, n)
+    dt = 0.01
+    #mpcModel = PlanarArmMpcModel(m, N, 4)
     mpcModel = PointRobotMpcModel(m, N)
+    #mpcModel = DiffDriveMpcModel(2, N)
     mpcModel.setDt(dt)
-    mpcModel.setSlack()
-    mpcModel.setObstacles(0, 2)
+    #mpcModel.setSlack()
+    mpcModel.setObstacles(1, 2)
     mpcModel.setModel()
-    solverName = "solver_n" + str(n) + "_" + str(dt).replace('.','') + "_H" + str(N)
-    mpcModel.setCodeoptions(solverName, debug=False)
+    mpcModel.setCodeoptions()
     path_to_solvers = os.path.dirname(os.path.abspath(__file__)) + '/solvers/'
     mpcModel.generateSolver(location=path_to_solvers)
 

@@ -14,7 +14,7 @@ def diagSX(val, size):
 
 
 class MpcModel(object):
-    def __init__(self, m, n, N):
+    def __init__(self, m, n, N, initParamMap=True):
         self._m = m
         self._nx = 2 * n
         self._nu = n
@@ -23,18 +23,19 @@ class MpcModel(object):
         self._n_obst = 0
         self._m_obst = 0
         self._pairs = []
-        self._limits = {
-            "x": {"low": np.ones(self._nx) * -100, "high": np.ones(self._nx) * 100},
-            "u": {"low": np.ones(self._nu) * -100, "high": np.ones(self._nu) * 100},
-            "s": {"low": np.zeros(1), "high": np.ones(1) * np.inf},
-        }
         self._N = N
-        self.initParamMap()
+        if initParamMap:
+            self._limits = {
+                "x": {"low": np.ones(self._nx) * -100, "high": np.ones(self._nx) * 100},
+                "u": {"low": np.ones(self._nu) * -100, "high": np.ones(self._nu) * 100},
+                "s": {"low": np.zeros(1), "high": np.ones(1) * np.inf},
+            }
+            self.initParamMap()
 
     def initParamMap(self):
         self._paramMap = {}
         self._npar = 0
-        self.addEntry2ParamMap("wu", self._n)
+        self.addEntry2ParamMap("wu", self._nu)
         self.addEntry2ParamMap("wvel", self._n)
         self.addEntry2ParamMap("w", self._m)
         if self._ns > 0:
@@ -62,18 +63,23 @@ class MpcModel(object):
         self._obstaclesInCosts = inCostFunction
         self.addEntry2ParamMap('wobst', 1)
 
+    def extractVariables(self, z):
+        q = z[0: self._n]
+        qdot = z[self._n: self._nx]
+        qddot = z[self._nx + self._ns : self._nx + self._ns + self._nu]
+        return q, qdot, qddot
+
     def eval_objectiveCommon(self, z, p):
-        q = z[0 : self._n]
-        qdot = z[self._n : self._nx]
+        q, qdot, *_ = self.extractVariables(z)
         w = p[self._paramMap["w"]]
         wvel = p[self._paramMap["wvel"]]
         g = p[self._paramMap["g"]]
         W = diagSX(w, self._m)
-        Wvel = diagSX(wvel, self._n)
+        Wvel = diagSX(wvel, self._nu)
         fk_ee = self._fk.fk(q, self._n, positionOnly=True)
+        Jvel = ca.dot(qdot, ca.mtimes(Wvel, qdot))
         err = fk_ee - g
         Jx = ca.dot(err, ca.mtimes(W, err))
-        Jvel = ca.dot(qdot, ca.mtimes(Wvel, qdot))
         Jobst = 0
         Js = 0
         if self._obstaclesInCosts:
@@ -93,9 +99,9 @@ class MpcModel(object):
 
     def eval_objective(self, z, p):
         wu = p[self._paramMap["wu"]]
-        Wu = diagSX(wu, self._n)
+        Wu = diagSX(wu, self._nu)
         Jx, Jvel, Js, Jobst = self.eval_objectiveCommon(z, p)
-        qddot = z[self._nx + self._ns : self._nx + self._ns + self._nu]
+        _, _, qddot, *_ = self.extractVariables(z)
         Ju = ca.dot(qddot, ca.mtimes(Wu, qddot))
         return Jx + Jvel + Js + Jobst + Ju
 
@@ -109,7 +115,7 @@ class MpcModel(object):
 
     def eval_obstacleDistances(self, z, p):
         ineqs = []
-        q = z[0 : self._n]
+        q, *_ = self.extractVariables(z)
         if self._ns > 0:
             s = z[self._nx]
         else:
@@ -128,7 +134,7 @@ class MpcModel(object):
         return ineqs
 
     def eval_selfCollision(self, z, p):
-        q = z[0 : self._n]
+        q, *_ = self.extractVariables(z)
         r_body = p[self._paramMap["r_body"]]
         ineqs = []
         for pair in self._pairs:
@@ -140,7 +146,7 @@ class MpcModel(object):
 
     def eval_jointLimits(self, z, p):
         # Parameters in state boundaries?
-        q = z[0 : self._n]
+        q, *_ = self.extractVariables(z)
         lower_limits = p[self._paramMap["lower_limits"]]
         upper_limits = p[self._paramMap["upper_limits"]]
         ineqs = []
@@ -155,7 +161,7 @@ class MpcModel(object):
         self._limits = limits
 
     def continuous_dynamics(self, x, u):
-        qdot = x[self._n : self._nx]
+        qdot = x[self._n: self._nx]
         qddot = u[-self._nu:]
         acc = ca.vertcat(qdot, qddot)
         return acc
@@ -196,7 +202,15 @@ class MpcModel(object):
         self._model.ineq = self.eval_inequalities
         self._model.xinitidx = range(0, self._nx)
 
-    def setCodeoptions(self, solverName, debug=False):
+    def setCodeoptions(self, **kwargs):
+        debug = False
+        solverName = self._modelName + "_n" + str(self._n) + "_" + str(self._dt).replace('.','') + "_H" + str(self._N)
+        if self._ns == 0:
+            solverName += "_noSlack"
+        if debug in kwargs:
+            debug = kwargs.get('debug')
+        if solverName in kwargs:
+            solverName = kwargs.get('solverName')
         self._solverName = solverName
         self._codeoptions = forcespro.CodeOptions(solverName)
         self._codeoptions.nlp.integrator.type = "ERK2"

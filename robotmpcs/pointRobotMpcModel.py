@@ -8,4 +8,5 @@ class PointRobotMpcModel(MpcModel):
         n = 2
         super().__init__(m, n, N)
         self._fk = FkCreator('pointMass', n).fk()
+        self._modelName = 'pointRobot'
 
