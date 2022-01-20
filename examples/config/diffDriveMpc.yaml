@@ -4,11 +4,11 @@ dt: 0.5
 H: 2
 interval: 1
 weights:
-  wx: 3.0
+  w: 3.0
   wvel: 1.0
   ws: 1e10
   wu: 1.0
   wobst: 0.05
 obst:
   nbObst: 5
-slack: True
+slack: False
