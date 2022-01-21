@@ -8,4 +8,5 @@ class PandaMpcModel(MpcModel):
         n = 7
         super().__init__(m, n, N)
         self._fk = FkCreator('panda', n).fk()
+        self._modelName = 'panda'
 
