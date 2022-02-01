@@ -76,7 +76,7 @@ class MpcModel(object):
         g = p[self._paramMap["g"]]
         W = diagSX(w, self._m)
         Wvel = diagSX(wvel, self._nu)
-        fk_ee = self._fk.fk(q, self._n, positionOnly=True)
+        fk_ee = self._fk.fk(q, self._n, positionOnly=True)[0:self._m]
         Jvel = ca.dot(qdot, ca.mtimes(Wvel, qdot))
         err = fk_ee - g
         Jx = ca.dot(err, ca.mtimes(W, err))
@@ -124,7 +124,7 @@ class MpcModel(object):
             obsts = p[self._paramMap["obst"]]
             r_body = p[self._paramMap["r_body"]]
             for j in range(self._n):
-                fk = self._fk.fk(q, j + 1, positionOnly=True)
+                fk = self._fk.fk(q, j + 1, positionOnly=True)[0:self._m]
                 for i in range(self._n_obst):
                     obst = obsts[i * (self._m_obst + 1) : (i + 1) * (self._m_obst + 1)]
                     x = obst[0 : self._m_obst]
@@ -138,8 +138,8 @@ class MpcModel(object):
         r_body = p[self._paramMap["r_body"]]
         ineqs = []
         for pair in self._pairs:
-            fk1 = self._fk.fk(q, pair[0], positionOnly=True)
-            fk2 = self._fk.fk(q, pair[1], positionOnly=True)
+            fk1 = self._fk.fk(q, pair[0], positionOnly=True)[0: self._m]
+            fk2 = self._fk.fk(q, pair[1], positionOnly=True)[0: self._m]
             dist = ca.norm_2(fk1 - fk2)
             ineqs.append(dist - (2 * r_body))
         return ineqs

@@ -16,7 +16,7 @@ class DiffDriveMpcModel(MpcModel):
             "u": {"low": np.ones(self._nu) * -100, "high": np.ones(self._nu) * 100},
             "s": {"low": np.zeros(1), "high": np.ones(1) * np.inf},
         }
-        self._fk = FkCreator('groundRobot', n).fk()
+        self._fk = FkCreator('groundRobot', self._n).fk()
         self.initParamMap()
         self._modelName = "diffDrive"
 
@@ -34,7 +34,7 @@ class DiffDriveMpcModel(MpcModel):
         g = p[self._paramMap["g"]]
         W = diagSX(w, self._m)
         Wvel = diagSX(wvel, self._nu)
-        fk_ee = self._fk.fk(q, 1, positionOnly=True)
+        fk_ee = self._fk.fk(q, self._n, positionOnly=True)[0:self._m]
         Jvel = ca.dot(vel, ca.mtimes(Wvel, vel))
         err = fk_ee - g
         Jx = ca.dot(err, ca.mtimes(W, err))
