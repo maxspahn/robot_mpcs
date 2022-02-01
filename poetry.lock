@@ -65,17 +65,24 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "forwardkinematics"
-version = "0.5.0"
+version = "0.5.1"
 description = "\"Light-weight implementation of forward kinematics using casadi.\""
 category = "main"
 optional = false
-python-versions = ">=3.6,<4.0"
+python-versions = "^3.6"
+develop = false
 
 [package.dependencies]
 casadi = "<=3.5.5"
-numpy = ">=1.15.5,<2.0.0"
-pytest = ">=6.2.5,<7.0.0"
+numpy = "^1.15.5"
+pytest = "^6.2.5"
 urdf_parser_py = ">=0.0.3"
+
+[package.source]
+type = "git"
+url = "https://git@github.com/maxspahn/forwardKinematics.git"
+reference = "main"
+resolved_reference = "5343c33c11f16c6b6389b25c8d0e4b086477f4bf"
 
 [[package]]
 name = "geomdl"
@@ -215,7 +222,7 @@ scenes = ["motion-planning-scenes (>=0.1.0,<0.2.0)"]
 type = "git"
 url = "https://git@github.com/maxspahn/gym_envs_planar.git"
 reference = "master"
-resolved_reference = "1bac3a3808a3b153252c80b0019e9bf91f3dc531"
+resolved_reference = "f79e5cc37475381d58f0a352dd577e89a7ab990b"
 
 [[package]]
 name = "pluggy"
@@ -388,7 +395,7 @@ agents = ["planarenvs", "motion-planning-scenes"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6,<3.11"
-content-hash = "bd5bfc8508b7f5fcef78cbae5924fe6bff9e7aff0a35caf825f4ba878fcadfa5"
+content-hash = "6c34af726266ead12b41d23787c4a4dfdcf0ad71053f537b53ac0c5b07176fab"
 
 [metadata.files]
 atomicwrites = [
@@ -455,10 +462,7 @@ colorama = [
     {file = "colorama-0.4.4-py2.py3-none-any.whl", hash = "sha256:9f47eda37229f68eee03b24b9748937c7dc3868f906e8ba69fbcbdd3bc5dc3e2"},
     {file = "colorama-0.4.4.tar.gz", hash = "sha256:5941b2b48a20143d2267e95b1c2a7603ce057ee39fd88e7329b0c292aa16869b"},
 ]
-forwardkinematics = [
-    {file = "forwardkinematics-0.5.0-py3-none-any.whl", hash = "sha256:6d36f4a62d04cf0f9df666925255175fcf8edc7ff98febb529c7e350c96598fe"},
-    {file = "forwardkinematics-0.5.0.tar.gz", hash = "sha256:415325c3458bef26b53775219bde2e6a9068ab85dded800bfd2a6887c12978b5"},
-]
+forwardkinematics = []
 geomdl = [
     {file = "geomdl-5.3.1-py2.py3-none-any.whl", hash = "sha256:0f36a4bacde5b218c73aadc69ff152e7f7fb3aa7260df0e6647a701a5351d76a"},
     {file = "geomdl-5.3.1.tar.gz", hash = "sha256:e81a31b4d5f111267b16045ba1d9539235a98b2cff5e4bad18f7ddcd4cb804c8"},
