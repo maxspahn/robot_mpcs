@@ -1,5 +1,7 @@
 import casadi as ca
 import numpy as np
+import sys
+sys.path.insert(0, '/Users/Alex/develop/forces_pro_client')
 import forcespro
 import yaml
 from shutil import move
@@ -16,14 +18,14 @@ def diagSX(val, size):
 class MpcModel(object):
     def __init__(self, m, n, N, initParamMap=True):
         self._m = m
-        self._nx = 2 * n
-        self._nu = n
-        self._ns = 0
-        self._n = n
-        self._n_obst = 0
-        self._m_obst = 0
-        self._pairs = []
-        self._N = N
+        self._nx = 1 * n # amount state variables
+        self._nu = n # num of actuations
+        self._ns = 0 # slack variables
+        self._n = n # DOF
+        self._n_obst = 0 # obst amount
+        self._m_obst = 0 # obst dim
+        self._pairs = [] # self-colision avoidance
+        self._N = N # Time Horizon
         if initParamMap:
             self._limits = {
                 "x": {"low": np.ones(self._nx) * -100, "high": np.ones(self._nx) * 100},
@@ -65,8 +67,9 @@ class MpcModel(object):
 
     def extractVariables(self, z):
         q = z[0: self._n]
-        qdot = z[self._n: self._nx]
-        qddot = z[self._nx + self._ns : self._nx + self._ns + self._nu]
+        qdot = z[self._n + self._ns: self._nx + self._ns + self._nu]
+        qddot = z[self._nx + self._ns : self._nx + self._ns + self._nu] # fällt bei VelControl weg
+        qddot = np.zeros(self._n)
         return q, qdot, qddot
 
     def eval_objectiveCommon(self, z, p):
@@ -91,7 +94,7 @@ class MpcModel(object):
             s = z[self._nx]
             ws = p[self._paramMap["ws"]]
             Js += ws * s ** 2
-        return Jx, Jvel, Js, Jobst
+        return Jx, 0*Jvel, Js, Jobst
 
     def eval_objectiveN(self, z, p):
         Jx, Jvel, Js, Jobst = self.eval_objectiveCommon(z, p)
@@ -101,8 +104,8 @@ class MpcModel(object):
         wu = p[self._paramMap["wu"]]
         Wu = diagSX(wu, self._nu)
         Jx, Jvel, Js, Jobst = self.eval_objectiveCommon(z, p)
-        _, _, qddot, *_ = self.extractVariables(z)
-        Ju = ca.dot(qddot, ca.mtimes(Wu, qddot))
+        _, qdot, _, *_ = self.extractVariables(z) # changed to qdot
+        Ju = ca.dot(qdot, ca.mtimes(Wu, qdot))
         return Jx + Jvel + Js + Jobst + Ju
 
     def eval_inequalities(self, z, p):
@@ -162,9 +165,11 @@ class MpcModel(object):
 
     def continuous_dynamics(self, x, u):
         qdot = x[self._n: self._nx]
-        qddot = u[-self._nu:]
-        acc = ca.vertcat(qdot, qddot)
-        return acc
+        qdot = u[-self._nu:]
+        #qddot = u[-self._nu:]
+        #acc = ca.vertcat(qdot, qddot)
+        vel = qdot
+        return vel #acc
 
     def setDt(self, dt):
         self._dt = dt

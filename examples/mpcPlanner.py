@@ -2,6 +2,7 @@ import numpy as np
 import yaml
 import os
 import sys
+sys.path.insert(0, '/Users/Alex/develop/forces_pro_client')
 import forcespro
 import gym
 import planarenvs.groundRobots
@@ -13,13 +14,15 @@ from MotionPlanningGoal.staticSubGoal import StaticSubGoal
 import robotmpcs
 from robotmpcs.planner.mpcPlanner import MPCPlanner
 
-
+## custom
+sys.path.insert(1, '/Users/Alex/git/thesis/gym-dataset-recorder')
+import generate_dataset as gd
 
 path_name = os.path.dirname(os.path.realpath(__file__)) + '/'
 envMap = {
     'planarArm': 'nLink-reacher-acc-v0', 
     'diffDrive': 'ground-robot-acc-v0', 
-    'pointRobot': 'point-robot-acc-v0', 
+    'pointRobot': 'point-robot-vel-v0',
 }
 obst1Dict = {
     "dim": 2,
@@ -29,8 +32,11 @@ obst1Dict = {
 sphereObst1 = SphereObstacle(name="simpleSphere", contentDict=obst1Dict)
 
 def main():
-    test_setup = os.path.dirname(os.path.realpath(__file__)) + "/" + sys.argv[1]
-    robotType = re.findall('\/(\S*)M', sys.argv[1])[0]
+    CONFIGPATH="config/pointRobotMpc.yaml"
+    #test_setup = os.path.dirname(os.path.realpath(__file__)) + "/" + sys.argv[1]
+    test_setup = os.path.dirname(os.path.realpath(__file__)) + "/" + CONFIGPATH
+    #robotType = re.findall('\/(\S*)M', sys.argv[1])[0]
+    robotType = re.findall('\/(\S*)M', CONFIGPATH)[0]
     solversDir = os.path.dirname(os.path.realpath(__file__)) + "/solvers/"
     envName = envMap[robotType]
     try:
