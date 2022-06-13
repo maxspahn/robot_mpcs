@@ -14,20 +14,20 @@ def diagSX(val, size):
 
 
 class MpcModel(object):
-    def __init__(self, m, n, N, initParamMap=True):
-        self._m = m
-        self._nx = 2 * n
-        self._nu = n
-        self._ns = 0
-        self._n = n
+    def __init__(self, dim_goal, dof, time_horizon, initParamMap=True):
+        self._dim_goal = dim_goal
+        self._n_state = 2 * dof
+        self._n_control_input = dof
+        self._n_slack = 0
+        self._n_dof = dof
         self._n_obst = 0
-        self._m_obst = 0
+        self._dim_obst = 0
         self._pairs = []
-        self._N = N
+        self._time_horizon = time_horizon
         if initParamMap:
             self._limits = {
-                "x": {"low": np.ones(self._nx) * -100, "high": np.ones(self._nx) * 100},
-                "u": {"low": np.ones(self._nu) * -100, "high": np.ones(self._nu) * 100},
+                "x": {"low": np.ones(self._n_state) * -100, "high": np.ones(self._n_state) * 100},
+                "u": {"low": np.ones(self._n_control_input) * -100, "high": np.ones(self._n_control_input) * 100},
                 "s": {"low": np.zeros(1), "high": np.ones(1) * np.inf},
             }
             self.initParamMap()
@@ -35,22 +35,22 @@ class MpcModel(object):
     def initParamMap(self):
         self._paramMap = {}
         self._npar = 0
-        self.addEntry2ParamMap("wu", self._nu)
-        self.addEntry2ParamMap("wvel", self._n)
-        self.addEntry2ParamMap("w", self._m)
-        if self._ns > 0:
+        self.addEntry2ParamMap("wu", self._n_control_input)
+        self.addEntry2ParamMap("wvel", self._n_dof)
+        self.addEntry2ParamMap("w", self._dim_goal)
+        if self._n_slack > 0:
             self.addEntry2ParamMap("ws", 1)
-        self.addEntry2ParamMap("g", self._m)
+        self.addEntry2ParamMap("g", self._dim_goal)
         self.addEntry2ParamMap("r_body", 1)
-        self.addEntry2ParamMap("lower_limits", self._n)
-        self.addEntry2ParamMap("upper_limits", self._n)
+        self.addEntry2ParamMap("lower_limits", self._n_dof)
+        self.addEntry2ParamMap("upper_limits", self._n_dof)
 
     def addEntry2ParamMap(self, name, n_par):
         self._paramMap[name] = list(range(self._npar, self._npar + n_par))
         self._npar += n_par
 
     def setSlack(self):
-        self._ns = 1
+        self._n_slack = 1
         self.addEntry2ParamMap("ws", 1)
 
     def setSelfCollisionAvoidance(self, pairs):
@@ -58,15 +58,15 @@ class MpcModel(object):
 
     def setObstacles(self, n_obst, m_obst, inCostFunction=False):
         self._n_obst = n_obst
-        self._m_obst = m_obst
+        self._dim_obst = m_obst
         self.addEntry2ParamMap("obst", (m_obst + 1) * n_obst)
         self._obstaclesInCosts = inCostFunction
         self.addEntry2ParamMap('wobst', 1)
 
     def extractVariables(self, z):
-        q = z[0: self._n]
-        qdot = z[self._n: self._nx]
-        qddot = z[self._nx + self._ns : self._nx + self._ns + self._nu]
+        q = z[0: self._n_dof]
+        qdot = z[self._n_dof: self._n_state]
+        qddot = z[self._n_state + self._n_slack: self._n_state + self._n_slack + self._n_control_input]
         return q, qdot, qddot
 
     def eval_objectiveCommon(self, z, p):
@@ -74,9 +74,9 @@ class MpcModel(object):
         w = p[self._paramMap["w"]]
         wvel = p[self._paramMap["wvel"]]
         g = p[self._paramMap["g"]]
-        W = diagSX(w, self._m)
-        Wvel = diagSX(wvel, self._nu)
-        fk_ee = self._fk.fk(q, self._n, positionOnly=True)[0:self._m]
+        W = diagSX(w, self._dim_goal)
+        Wvel = diagSX(wvel, self._n_control_input)
+        fk_ee = self._fk.fk(q, self._n_dof, positionOnly=True)[0:self._dim_goal]
         Jvel = ca.dot(qdot, ca.mtimes(Wvel, qdot))
         err = fk_ee - g
         Jx = ca.dot(err, ca.mtimes(W, err))
@@ -87,8 +87,8 @@ class MpcModel(object):
             wobst = ca.SX(np.ones(obstDistances.shape[0]) * p[self._paramMap['wobst']])
             Wobst = diagSX(wobst, obstDistances.shape[0])
             Jobst += ca.dot(obstDistances, ca.mtimes(Wobst, obstDistances))
-        if self._ns > 0:
-            s = z[self._nx]
+        if self._n_slack > 0:
+            s = z[self._n_state]
             ws = p[self._paramMap["ws"]]
             Js += ws * s ** 2
         return Jx, Jvel, Js, Jobst
@@ -99,7 +99,7 @@ class MpcModel(object):
 
     def eval_objective(self, z, p):
         wu = p[self._paramMap["wu"]]
-        Wu = diagSX(wu, self._nu)
+        Wu = diagSX(wu, self._n_control_input)
         Jx, Jvel, Js, Jobst = self.eval_objectiveCommon(z, p)
         _, _, qddot, *_ = self.extractVariables(z)
         Ju = ca.dot(qddot, ca.mtimes(Wu, qddot))
@@ -107,8 +107,8 @@ class MpcModel(object):
 
     def eval_inequalities(self, z, p):
         all_ineqs = self.eval_obstacleDistances(z, p) + self.eval_jointLimits(z, p) + self.eval_selfCollision(z, p)
-        if self._ns > 0:
-            s = z[self._nx]
+        if self._n_slack > 0:
+            s = z[self._n_state]
             for ineq in all_ineqs:
                 ineq  += s
         return all_ineqs
@@ -116,19 +116,19 @@ class MpcModel(object):
     def eval_obstacleDistances(self, z, p):
         ineqs = []
         q, *_ = self.extractVariables(z)
-        if self._ns > 0:
-            s = z[self._nx]
+        if self._n_slack > 0:
+            s = z[self._n_state]
         else:
             s = 0.0
         if "obst" in self._paramMap.keys():
             obsts = p[self._paramMap["obst"]]
             r_body = p[self._paramMap["r_body"]]
-            for j in range(self._n):
-                fk = self._fk.fk(q, j + 1, positionOnly=True)[0:self._m]
+            for j in range(self._n_dof):
+                fk = self._fk.fk(q, j + 1, positionOnly=True)[0:self._dim_goal]
                 for i in range(self._n_obst):
-                    obst = obsts[i * (self._m_obst + 1) : (i + 1) * (self._m_obst + 1)]
-                    x = obst[0 : self._m_obst]
-                    r = obst[self._m_obst]
+                    obst = obsts[i * (self._dim_obst + 1): (i + 1) * (self._dim_obst + 1)]
+                    x = obst[0 : self._dim_obst]
+                    r = obst[self._dim_obst]
                     dist = ca.norm_2(fk - x)
                     ineqs.append(dist - r - r_body)
         return ineqs
@@ -138,8 +138,8 @@ class MpcModel(object):
         r_body = p[self._paramMap["r_body"]]
         ineqs = []
         for pair in self._pairs:
-            fk1 = self._fk.fk(q, pair[0], positionOnly=True)[0: self._m]
-            fk2 = self._fk.fk(q, pair[1], positionOnly=True)[0: self._m]
+            fk1 = self._fk.fk(q, pair[0], positionOnly=True)[0: self._dim_goal]
+            fk2 = self._fk.fk(q, pair[1], positionOnly=True)[0: self._dim_goal]
             dist = ca.norm_2(fk1 - fk2)
             ineqs.append(dist - (2 * r_body))
         return ineqs
@@ -150,7 +150,7 @@ class MpcModel(object):
         lower_limits = p[self._paramMap["lower_limits"]]
         upper_limits = p[self._paramMap["upper_limits"]]
         ineqs = []
-        for j in range(self._n):
+        for j in range(self._n_dof):
             dist_lower = q[j] - lower_limits[j]
             dist_upper = upper_limits[j] - q[j]
             ineqs.append(dist_lower)
@@ -161,8 +161,8 @@ class MpcModel(object):
         self._limits = limits
 
     def continuous_dynamics(self, x, u):
-        qdot = x[self._n: self._nx]
-        qddot = u[-self._nu:]
+        qdot = x[self._n_dof: self._n_state]
+        qddot = u[-self._n_control_input:]
         acc = ca.vertcat(qdot, qddot)
         return acc
 
@@ -170,15 +170,15 @@ class MpcModel(object):
         self._dt = dt
 
     def setModel(self):
-        self._model = forcespro.nlp.SymbolicModel(self._N)
+        self._model = forcespro.nlp.SymbolicModel(self._time_horizon)
         self._model.continuous_dynamics = self.continuous_dynamics
         self._model.objective = self.eval_objective
         self._model.objectiveN = self.eval_objectiveN
         E = np.concatenate(
-            [np.eye(self._nx), np.zeros((self._nx, self._nu + self._ns))], axis=1
+            [np.eye(self._n_state), np.zeros((self._n_state, self._n_control_input + self._n_slack))], axis=1
         )
         self._model.E = E
-        if self._ns > 0:
+        if self._n_slack > 0:
             self._model.lb = np.concatenate(
                 (self._limits["x"]["low"], self._limits["s"]["low"], self._limits["u"]["low"])
             )
@@ -193,19 +193,19 @@ class MpcModel(object):
                 (self._limits["x"]["high"], self._limits["u"]["high"])
             )
         self._model.npar = self._npar
-        self._model.nvar = self._nx + self._nu + self._ns
-        self._model.neq = self._nx
-        nbInequalities = self._n_obst * self._n + 2 * self._n + len(self._pairs)
+        self._model.nvar = self._n_state + self._n_control_input + self._n_slack
+        self._model.neq = self._n_state
+        nbInequalities = self._n_obst * self._n_dof + 2 * self._n_dof + len(self._pairs)
         self._model.nh = nbInequalities
         self._model.hu = np.ones(nbInequalities) * np.inf
         self._model.hl = np.zeros(nbInequalities)
         self._model.ineq = self.eval_inequalities
-        self._model.xinitidx = range(0, self._nx)
+        self._model.xinitidx = range(0, self._n_state)
 
     def setCodeoptions(self, **kwargs):
         debug = False
-        solverName = self._modelName + "_n" + str(self._n) + "_" + str(self._dt).replace('.','') + "_H" + str(self._N)
-        if self._ns == 0:
+        solverName = self._modelName + "_n" + str(self._n_dof) + "_" + str(self._dt).replace('.', '') + "_H" + str(self._time_horizon)
+        if self._n_slack == 0:
             solverName += "_noSlack"
         if debug in kwargs:
             debug = kwargs.get('debug')
@@ -227,7 +227,7 @@ class MpcModel(object):
         _ = self._model.generate_solver(self._codeoptions)
         with open(self._solverName + '/paramMap.yaml', 'w') as outfile:
             yaml.dump(self._paramMap, outfile, default_flow_style=False)
-        properties = {"nx": self._nx, "nu": self._nu, "npar": self._npar, "ns": self._ns}
+        properties = {"n_state": self._n_state, "n_control_input": self._n_control_input, "npar": self._npar, "n_slack": self._n_slack}
         with open(self._solverName + '/properties.yaml', 'w') as outfile:
             yaml.dump(properties, outfile, default_flow_style=False)
         move(self._solverName, location + self._solverName)

@@ -4,9 +4,9 @@ import os
 import sys
 import forcespro
 import gym
-import planarenvs.groundRobots
-import planarenvs.pointRobot
-import planarenvs.nLinkReacher
+import planarenvs.ground_robots
+import planarenvs.point_robot
+import planarenvs.n_link_reacher
 import re
 from MotionPlanningEnv.sphereObstacle import SphereObstacle
 from MotionPlanningGoal.staticSubGoal import StaticSubGoal
@@ -41,7 +41,7 @@ def main():
         return
     myMPCPlanner.concretize()
     myMPCPlanner.reset()
-    n = myMPCPlanner.n()
+    n = myMPCPlanner.dof()
     staticGoalDict = {
         "m": 2, "w": 1.0, "prime": True, 'indices': [0, 1], 'parent_link': 0, 'child_link': n,
         'desired_position': [2, -3], 'epsilon': 0.2, 'type': "staticSubGoal", 
@@ -52,7 +52,7 @@ def main():
     if robotType == 'diffDrive':
         env = gym.make(envName, render=True, dt=myMPCPlanner.dt())
     else:
-        env = gym.make(envName, render=True, dt=myMPCPlanner.dt(), n=myMPCPlanner.n())
+        env = gym.make(envName, render=True, dt=myMPCPlanner.dt(), n=myMPCPlanner.dof())
     limits = np.array([[-50, ] * n, [50, ] * n])
     myMPCPlanner.setJointLimits(limits)
     q0 = np.random.random(n)
