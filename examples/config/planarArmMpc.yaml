@@ -1,7 +1,7 @@
 type: mpc
-n: 4
+dof: 4
 dt: 0.01
-H: 10
+time_horizon: 10
 interval: 1
 weights:
   w: 5.0

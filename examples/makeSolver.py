@@ -7,13 +7,13 @@ from robotmpcs.models.boxerMpcModel import BoxerMpcModel
 
 
 def main():
-    N = 10
-    m = 2
+    time_horizon = 10
+    dim_goal = 2
     dt = 0.01
-    #mpcModel = PlanarArmMpcModel(m, N, 4)
-    #mpcModel = PointRobotMpcModel(m, N)
-    #mpcModel = DiffDriveMpcModel(2, N)
-    mpcModel = BoxerMpcModel(N)
+    #mpcModel = PlanarArmMpcModel(dim_goal, 4, time_horizon)
+    #mpcModel = PointRobotMpcModel(dim_goal, time_horizon)
+    #mpcModel = DiffDriveMpcModel(2, time_horizon)
+    mpcModel = BoxerMpcModel(time_horizon)
     mpcModel.setDt(dt)
     #mpcModel.setSlack()
     mpcModel.setObstacles(1, 2)
