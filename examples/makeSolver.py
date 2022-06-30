@@ -8,16 +8,16 @@ from robotmpcs.models.pandaMpcModel import PandaMpcModel
 
 
 def main():
-    N = 10
+    N = 15
     m = 3
     dt = 0.01
     #mpcModel = PlanarArmMpcModel(m, N, 4)
     #mpcModel = PointRobotMpcModel(m, N)
     #mpcModel = DiffDriveMpcModel(2, N)
-    mpcModel = PandaMpcModel(m ,N)
+    mpcModel = PandaMpcModel(m, N)
     mpcModel.setDt(dt)
     #mpcModel.setSlack()
-    #mpcModel.setObstacles(1, 2)
+    mpcModel.setObstacles(0, 3)
     mpcModel.setModel()
     mpcModel.setCodeoptions()
     path_to_solvers = os.path.dirname(os.path.abspath(__file__)) + '/solvers/'
