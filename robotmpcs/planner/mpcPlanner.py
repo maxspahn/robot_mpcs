@@ -126,7 +126,7 @@ class MPCPlanner(object):
                 ] = self.weights()["wobst"]
 
     def m(self):
-        return 2
+        return self._properties['m']
 
     def interval(self):
         return self._setup["interval"]
