@@ -232,7 +232,7 @@ class MpcModel(object):
         _ = self._model.generate_solver(self._codeoptions)
         with open(self._solverName + '/paramMap.yaml', 'w') as outfile:
             yaml.dump(self._paramMap, outfile, default_flow_style=False)
-        properties = {"nx": self._nx, "nu": self._nu, "npar": self._npar, "ns": self._ns}
+        properties = {"nx": self._nx, "nu": self._nu, "npar": self._npar, "ns": self._ns, "m": self._m}
         with open(self._solverName + '/properties.yaml', 'w') as outfile:
             yaml.dump(properties, outfile, default_flow_style=False)
         move(self._solverName, location + self._solverName)
