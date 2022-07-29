@@ -7,9 +7,9 @@ from robotmpcs.models.boxerMpcModel import BoxerMpcModel
 
 
 def main():
-    N = 10
+    N = 20
     m = 2
-    dt = 0.01
+    dt = 0.05
     #mpcModel = PlanarArmMpcModel(m, N, 4)
     #mpcModel = PointRobotMpcModel(m, N)
     #mpcModel = DiffDriveMpcModel(2, N)
