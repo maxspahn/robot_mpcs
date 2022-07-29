@@ -1,23 +1,24 @@
 [tool.poetry]
 name = "robotmpcs"
-version = "0.1.2"
+version = "0.1.4"
 description = "MPC generation for robots using ForcesPro."
 authors = ["Max Spahn <m.spahn@tudelft.nl>"]
 
 [tool.poetry.dependencies]
-python = "^3.6.2,<3.11"
-numpy = "^1.15"
-casadi = "<=3.5.5"
+python = "^3.6.5,<3.10"
+numpy = "^1.15.3"
+casadi = "^3.5.4,!=3.5.5.post1,!=3.5.5.post2"
 requests = "^2.27.1"
 pyaml = "^21.10.1"
-forwardkinematics = {git = "https://git@github.com/maxspahn/forwardKinematics.git", rev = "release-casadi-3.5.5"}
-planarenvs = {git = "https://git@github.com/maxspahn/gym_envs_planar.git", rev = "release-casadi-3.5.5", optional = true}
-motion_planning_scenes = {git = "https://git@github.com/maxspahn/motion_planning_scenes.git", rev = "release-casadi-3.5.5", optional = true}
+forwardkinematics = "^1.0.3"
+motion-planning-scenes = {version = "^0.1", optional = true}
+planarenvs = {version = "^1.0.3", optional = true}
+urdfenvs = {version = "^0.2.2", optional = true}
 
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.extras]
-agents = ["planarenvs", "urdfenvs", "motion_planning_scenes"]
+agents = ["planarenvs", "urdfenvs", "motion-planning-scenes"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

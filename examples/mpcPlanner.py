@@ -4,14 +4,15 @@ import os
 import sys
 import forcespro
 import gym
-import planarenvs.groundRobots
-import planarenvs.pointRobot
-import planarenvs.nLinkReacher
+import planarenvs.ground_robots
+import planarenvs.point_robot
+import planarenvs.n_link_reacher
+import urdfenvs.boxer_robot
 import re
 from MotionPlanningEnv.sphereObstacle import SphereObstacle
 from MotionPlanningGoal.staticSubGoal import StaticSubGoal
 import robotmpcs
-from robotmpcs.planner.mpcPlanner import MPCPlanner
+from robotmpcs.planner.mpcPlanner import MPCPlanner, SolverDoesNotExistError
 
 
 
@@ -20,11 +21,12 @@ envMap = {
     'planarArm': 'nLink-reacher-acc-v0', 
     'diffDrive': 'ground-robot-acc-v0', 
     'pointRobot': 'point-robot-acc-v0', 
+    'boxer': 'boxer-robot-acc-v0',
 }
 obst1Dict = {
     "dim": 2,
     "type": "sphere",
-    "geometry": {"position": [1.5, -0.2], "radius": 0.7},
+    "geometry": {"position": [4.0, -0.5], "radius": 1.0},
 }
 sphereObst1 = SphereObstacle(name="simpleSphere", contentDict=obst1Dict)
 
@@ -44,27 +46,28 @@ def main():
     n = myMPCPlanner.n()
     staticGoalDict = {
         "m": 2, "w": 1.0, "prime": True, 'indices': [0, 1], 'parent_link': 0, 'child_link': n,
-        'desired_position': [2, -3], 'epsilon': 0.2, 'type': "staticSubGoal", 
+        'desired_position': [8, 0], 'epsilon': 0.2, 'type': "staticSubGoal", 
     }
     staticGoal = StaticSubGoal(name="goal1", contentDict=staticGoalDict)
     myMPCPlanner.setObstacles([sphereObst1], 0.5)
     myMPCPlanner.setGoal(staticGoal)
-    if robotType == 'diffDrive':
+    if robotType in ['diffDrive', 'boxer']:
         env = gym.make(envName, render=True, dt=myMPCPlanner.dt())
     else:
         env = gym.make(envName, render=True, dt=myMPCPlanner.dt(), n=myMPCPlanner.n())
     limits = np.array([[-50, ] * n, [50, ] * n])
     myMPCPlanner.setJointLimits(limits)
     q0 = np.random.random(n)
+    #q0 = np.array([-8.0, 0.0, 0.0])
     ob = env.reset(pos=q0)
-    env.addObstacle(sphereObst1)
-    env.addGoal(staticGoal)
+    env.add_obstacle(sphereObst1)
+    env.add_goal(staticGoal)
     n_steps = 1000
     for i in range(n_steps):
-        q = ob['x']
-        qdot = ob['xdot']
-        if robotType == 'diffDrive':
-            vel = ob['vel']
+        q = ob['joint_state']['position']
+        qdot = ob['joint_state']['velocity']
+        if robotType in ['diffDrive', 'boxer']:
+            vel = np.array([ob['joint_state']['forward_velocity'], qdot[2]])
             action = myMPCPlanner.computeAction(q, qdot, vel)
         else:
             action = myMPCPlanner.computeAction(q, qdot)
