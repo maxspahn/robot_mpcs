@@ -587,7 +587,7 @@ name = "scipy"
 version = "1.5.4"
 description = "SciPy: Scientific Library for Python"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -743,7 +743,7 @@ agents = ["planarenvs", "urdfenvs", "motion-planning-scenes"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6.5,<3.10"
-content-hash = "bd71091c172c1d075dd7c3cdfd4eff80fe1eff16c15c34d355b9b428d7b3577b"
+content-hash = "90d5c676d93238d790048623e1e9affab80ffd220c16c48222183ce883cfc2c2"
 
 [metadata.files]
 antlr4-python3-runtime = [

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "robotmpcs"
-version = "0.1.4"
+version = "0.1.5"
 description = "MPC generation for robots using ForcesPro."
 authors = ["Max Spahn <m.spahn@tudelft.nl>"]
 
@@ -14,6 +14,7 @@ forwardkinematics = "^1.0.3"
 motion-planning-scenes = {version = "^0.1", optional = true}
 planarenvs = {version = "^1.0.3", optional = true}
 urdfenvs = {version = "^0.2.2", optional = true}
+scipy = "^1.5.0"
 
 [tool.poetry.dev-dependencies]
 
