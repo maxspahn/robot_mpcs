@@ -20,7 +20,7 @@ path_name = os.path.dirname(os.path.realpath(__file__)) + '/'
 envMap = {
     'planarArm': 'nLink-reacher-acc-v0', 
     'diffDrive': 'ground-robot-acc-v0', 
-    'pointRobot': 'point-robot-acc-v0', 
+    'po1ntRobot': 'point-robot-acc-v0', 
     'boxer': 'boxer-robot-acc-v0',
 }
 obst1Dict = {
@@ -64,14 +64,27 @@ def main():
     env.add_goal(staticGoal)
     n_steps = 1000
     for i in range(n_steps):
-        q = ob['joint_state']['position']
-        qdot = ob['joint_state']['velocity']
+        q, qdot, vel = extract_joint_states(ob, robotType)
         if robotType in ['diffDrive', 'boxer']:
-            vel = np.array([ob['joint_state']['forward_velocity'], qdot[2]])
             action = myMPCPlanner.computeAction(q, qdot, vel)
         else:
             action = myMPCPlanner.computeAction(q, qdot)
         ob, *_ = env.step(action)
+
+def extract_joint_states(ob: dict, robotType: str):
+    if  robotType == 'boxer':
+        q = ob['joint_state']['position']
+        qdot = ob['joint_state']['velocity']
+        vel = None
+        if robotType in ['diffDrive', 'boxer']:
+            vel = np.array([ob['joint_state']['forward_velocity'], qdot[2]])
+    else:
+        q = ob['x']
+        qdot = ob['xdot']
+        vel = None
+        if robotType in ['diffDrive']:
+            vel = ob['vel']
+    return q, qdot, vel
 
 
 if __name__ == "__main__":
