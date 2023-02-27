@@ -1,11 +1,11 @@
 type: mpc
-n: 2
+n: 7
+m: 3
 dt: 0.05
-m: 2
 H: 20
 interval: 1
 weights:
-  w: 1.0
+  w: 3.0
   wvel: 1.0
   ws: 1e10
   wu: 0.1

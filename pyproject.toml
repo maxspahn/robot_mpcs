@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "robotmpcs"
-version = "0.1.6"
+version = "0.1.7"
 description = "MPC generation for robots using ForcesPro."
 authors = ["Max Spahn <m.spahn@tudelft.nl>"]
 
