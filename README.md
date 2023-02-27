@@ -30,8 +30,7 @@ pip3 install '.[agents]'
 ## Examples
 ```
 cd examples
-python3 makeSolver.py
-python3 mpcPlanner.py <path/to/config/file>
+python3 makeSolver.py <path/to/config/file>
+python3 <robot/type>_example.py <path/to/config/file>
 ```
 
-This is a minimal example using a point robot.
