@@ -5,9 +5,7 @@ import sys
 import forcespro
 import re
 import robotmpcs
-
-
-
+from robotmpcs.models.mpcModel import MpcConfiguration
 
 
 
@@ -33,29 +31,28 @@ class PlannerSettingIncomplete(Exception):
     pass
 
 
+
+
 class MPCPlanner(object):
-    def __init__(self, setupFile, robotType, solversDir):
-        required_keys = ["type", "n", "obst", "weights", "interval", "H", "dt"]
-        self._required_keys = required_keys
-        self._setupFile = setupFile
+    def __init__(self, robotType, solversDir, **kwargs):
+        self._config = MpcConfiguration(**kwargs)
         self._robotType = robotType
-        self.parseSetup()
         """
         self._paramMap, self._npar, self._nx, self._nu, self._ns = getParameterMap(
-            self.n(), self.m(), self.nbObstacles(), self.m(), self.useSlack()
+            self_config.n, self.m(), self._config.number_obstacles, self.m(), self._config.slack
         )
         """
-        dt_str = str(self.dt()).replace(".", "")
+        dt_str = str(self._config.time_step).replace(".", "")
         self._solverFile = (
             solversDir
             + self._robotType
-            + "_n" + str(self.n())
+            + "_n" + str(self._config.n)
             + "_"
             + dt_str
             + "_H"
-            + str(self.H())
+            + str(self._config.time_horizon)
         )
-        if not self.useSlack():
+        if not self._config.slack:
             self._solverFile += "_noSlack"
         if not os.path.isdir(self._solverFile):
             raise(SolverDoesNotExistError(self._solverFile))
@@ -80,71 +77,35 @@ class MPCPlanner(object):
             print("FAILED TO LOAD SOLVER")
             raise e
 
-    def parseSetup(self):
-        with open(self._setupFile, "r") as setupStream:
-            self._setup = yaml.safe_load(setupStream)
-        self.checkCompleteness()
-
-    def checkCompleteness(self):
-        incomplete = False
-        missingKeys = ""
-        for key in self._required_keys:
-            if key not in self._setup.keys():
-                incomplete = True
-                missingKeys += key + ", "
-        if incomplete:
-            raise PlannerSettingIncomplete("Missing keys: %s" % missingKeys[:-2])
-
-    def plannerType(self):
-        return self._setup['type']
-
     def reset(self):
         print("RESETTING PLANNER")
-        self._x0 = np.zeros(shape=(self.H(), self._nx + self._nu + self._ns))
+        self._x0 = np.zeros(shape=(self._config.time_horizon, self._nx + self._nu + self._ns))
         self._xinit = np.zeros(self._nx)
-        if self.useSlack():
+        if self._config.slack:
             self._slack = 0.0
         self._x0[-1, -1] = 0.1
-        self._params = np.zeros(shape=(self._npar * self.H()), dtype=float)
-        for i in range(self.H()):
+        self._params = np.zeros(shape=(self._npar * self._config.time_horizon), dtype=float)
+        for i in range(self._config.time_horizon):
             self._params[
                 [self._npar * i + val for val in self._paramMap["w"]]
-            ] = self.weights()["w"]
+            ] = self._config.weights["w"]
             self._params[
                 [self._npar * i + val for val in self._paramMap["wvel"]]
-            ] = self.weights()["wvel"]
+            ] = self._config.weights["wvel"]
             self._params[
                 [self._npar * i + val for val in self._paramMap["wu"]]
-            ] = self.weights()["wu"]
-            if self.useSlack():
+            ] = self._config.weights["wu"]
+            if self._config.slack:
                 self._params[
                     [self._npar * i + val for val in self._paramMap["ws"]]
-                ] = self.weights()["ws"]
-            if 'wobst' in self.weights():
+                ] = self._config.weights["ws"]
+            if 'wobst' in self._config.weights:
                 self._params[
                     [self._npar * i + val for val in self._paramMap["wobst"]]
-                ] = self.weights()["wobst"]
+                ] = self._config.weights["wobst"]
 
     def m(self):
         return self._properties['m']
-
-    def interval(self):
-        return self._setup["interval"]
-
-    def useSlack(self):
-        if 'slack' in self._setup.keys():
-            return self._setup['slack']
-        else:
-            return True
-
-    def n(self):
-        return self._setup["n"]
-
-    def H(self):
-        return self._setup["H"]
-
-    def dt(self):
-        return self._setup["dt"]
 
     def dynamic(self):
         if 'dynamic' in self._setup.keys():
@@ -152,17 +113,12 @@ class MPCPlanner(object):
         else:
             return False
 
-    def weights(self):
-        return self._setup["weights"]
-
-    def nbObstacles(self):
-        return self._setup["obst"]["nbObst"]
 
     def setObstacles(self, obsts, r_body):
         self._r = 0.1
-        for i in range(self.H()):
+        for i in range(self._config.time_horizon):
             self._params[self._npar * i + self._paramMap["r_body"][0]] = r_body
-            for j in range(self.nbObstacles()):
+            for j in range(self._config.number_obstacles):
                 if j < len(obsts):
                     obst = obsts[j]
                 else:
@@ -175,7 +131,7 @@ class MPCPlanner(object):
 
     def updateDynamicObstacles(self, obstArray):
         nbDynamicObsts = int(obstArray.size / 3 / self.m())
-        for j in range(self.nbObstacles()):
+        for j in range(self._config.number_obstacles):
             if j < nbDynamicObsts:
                 obstPos = obstArray[:self.m()]
                 obstVel = obstArray[self.m():2*self.m()]
@@ -184,7 +140,7 @@ class MPCPlanner(object):
                 obstPos = np.ones(self.m()) * -100
                 obstVel = np.zeros(self.m())
                 obstAcc = np.zeros(self.m())
-            for i in range(self.H()):
+            for i in range(self._config.time_horizon):
                 for m_i in range(self.m()):
                     paramsIndexObstX = self._npar * i + self._paramMap['obst'][j * (self.m() + 1) + m_i]
                     predictedPosition = obstPos[m_i] + obstVel[m_i] * self.dt() * i + 0.5 * (self.dt() * i)**2 * obstAcc[m_i]
@@ -193,12 +149,12 @@ class MPCPlanner(object):
                 self._params[paramsIndexObstR] = self._r
 
     def setSelfCollisionAvoidance(self, r_body):
-        for i in range(self.H()):
+        for i in range(self._config.time_horizon):
             self._params[self._npar * i + self._paramMap["r_body"][0]] = r_body
 
     def setJointLimits(self, limits):
-        for i in range(self.H()):
-            for j in range(self.n()):
+        for i in range(self._config.time_horizon):
+            for j in range(self._config.n):
                 self._params[
                     self._npar * i + self._paramMap["lower_limits"][j]
                 ] = limits[0][j]
@@ -207,27 +163,30 @@ class MPCPlanner(object):
                 ] = limits[1][j]
 
     def setGoal(self, goal):
-        for i in range(self.H()):
+        for i in range(self._config.time_horizon):
             for j in range(self.m()):
-                self._params[self._npar * i + self._paramMap["g"][j]] = goal.position()[j]
-
+                if j >= len(goal.position()):
+                    position = 0
+                else:
+                    position = goal.position()[j]
+                self._params[self._npar * i + self._paramMap["g"][j]] = position
     def concretize(self):
         pass
 
     def shiftHorizon(self, output, ob):
         for key in output.keys():
-            if self.H() < 10:
+            if self._config.time_horizon < 10:
                 stage = int(key[-1:])
-            elif self.H() >= 10 and self.H() < 100:
+            elif self._config.time_horizon >= 10 and self._config.time_horizon < 100:
                 stage = int(key[-2:])
-            elif self.H() >= 100:
+            elif self._config.time_horizon >= 100:
                 stage = int(key[-3:])
             if stage == 1:
                 continue
             self._x0[stage - 2, 0 : len(output[key])] = output[key]
 
     def setX0(self, xinit):
-        for i in range(self.H()):
+        for i in range(self._config.time_horizon):
             self._x0[i][0 : self._nx] = xinit
 
     def solve(self, ob):
@@ -245,8 +204,8 @@ class MPCPlanner(object):
         # debug
         debug = False
         if debug:
-            nbPar = int(len(self._params)/self.H())
-            if self.useSlack():
+            nbPar = int(len(self._params)/self._config.time_horizon)
+            if self._config.slack:
                 z = np.concatenate((self._xinit, np.array([self._slack])))
             else:
                 z = self._xinit
@@ -256,7 +215,7 @@ class MPCPlanner(object):
             #print("ineq : ", ineq)
             # __import__('pdb').set_trace()
             """
-            for i in range(self.H()):
+            for i in range(self._config.time_horizon):
                 z = self._x0[i]
                 ineq = eval_ineq(z, p)
             """
@@ -266,14 +225,14 @@ class MPCPlanner(object):
         output, exitflag, info = self._solver.solve(problem)
         if exitflag < 0:
             print(exitflag)
-        if self.H() < 10:
+        if self._config.time_horizon < 10:
             key1 = 'x1'
-        elif self.H() >= 10 and self.H() < 100:
+        elif self._config.time_horizon >= 10 and self._config.time_horizon < 100:
             key1 = 'x01'
-        elif self.H() >= 100:
+        elif self._config.time_horizon >= 100:
             key1 = 'x001'
         action = output[key1][-self._nu :]
-        if self.useSlack():
+        if self._config.slack:
             self._slack = output[key1][self._nx]
             if self._slack > 1e-3:
                 print("slack : ", self._slack)
@@ -283,11 +242,11 @@ class MPCPlanner(object):
         return action, info
 
     def concretize(self):
-        self._actionCounter = self.interval()
+        self._actionCounter = self._config.interval
 
     def computeAction(self, *args):
         ob = np.concatenate(args)
-        if self._actionCounter >= self.interval():
+        if self._actionCounter >= self._config.interval:
             self._action, info = self.solve(ob)
             self._actionCounter = 1
         else:

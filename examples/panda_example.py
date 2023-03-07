@@ -15,8 +15,8 @@ class PandaMpcExample(MpcExample):
             "w": 1.0,
             "prime": True,
             'indices': [0, 1, 2],
-            'parent_link': 0,
-            'child_link': self._n,
+            'parent_link': 'panda_link0',
+            'child_link': 'panda_link7',
             'desired_position': [-0.3, -0.4, 0.2],
             'epsilon': 0.02,
             'type': "staticSubGoal", 
@@ -25,7 +25,7 @@ class PandaMpcExample(MpcExample):
         obst1Dict = {
             "dim": 3,
             "type": "sphere",
-            "geometry": {"position": [0.1, -0.3, 0.3], "radius": 0.2},
+            "geometry": {"position": [0.1, -0.3, 0.3], "radius": 0.15},
         }
         sphereObst1 = SphereObstacle(name="simpleSphere", contentDict=obst1Dict)
         self._obstacles = [sphereObst1]
@@ -39,7 +39,10 @@ class PandaMpcExample(MpcExample):
                 [-0.0175, 3.7525],
                 [-2.8973, 2.8973]
         ])
-        self._env = gym.make('panda-reacher-acc-v0', render=self._render, dt=self._planner.dt())
+        self._env = gym.make(
+            'panda-reacher-acc-v0',
+             render=self._render,
+             dt=self._planner._config.time_step)
 
     def run(self):
         q0 = np.median(self._limits)

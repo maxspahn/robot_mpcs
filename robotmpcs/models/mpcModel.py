@@ -1,4 +1,7 @@
+from MotionPlanningEnv.sphereObstacle import dataclass
 import casadi as ca
+from forwardkinematics.fksCommon.fk import ForwardKinematics
+from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
 import numpy as np
 import forcespro
 import yaml
@@ -13,17 +16,57 @@ def diagSX(val, size):
     return a
 
 
+@dataclass
+class MpcConfiguration:
+    time_horizon: int
+    time_step: float
+    weights: dict
+    slack: bool
+    interval: int
+    number_obstacles: int
+    model_name: str
+    n: int
+
+
+@dataclass
+class RobotConfiguration:
+    collision_links: list
+    selfCollision: dict
+    urdf_file: str
+    root_link: str
+    end_link: str
+    base_type: str
+
+
+
 class MpcModel(object):
-    def __init__(self, m, n, N, initParamMap=True):
-        self._m = m
-        self._nx = 2 * n
-        self._nu = n
+    def __init__(self, initParamMap=True, **kwargs):
+        self._config = MpcConfiguration(**kwargs['mpc'])
+        self._robot_config = RobotConfiguration(**kwargs['robot'])
+        with open(self._robot_config.urdf_file, 'r') as f:
+            urdf = f.read()
+        self._modelName = self._config.model_name
+        self._fk = GenericURDFFk(
+            urdf,
+            self._robot_config.root_link,
+            self._robot_config.end_link,
+            base_type=self._robot_config.base_type,
+        )
+        self._m = 3
+        self._dt = self._config.time_step
+        if self._robot_config.base_type == 'holonomic':
+            self._n = self._fk.n() 
+            self._nx = 2 * self._n
+            self._nu = self._n
+        elif self._robot_config.base_type == 'diffdrive':
+            self._n = self._fk.n() + 3
+            self._nx = 2 * self._n + 2
+            self._nu = 2 + self._fk.n()
         self._ns = 0
-        self._n = n
         self._n_obst = 0
-        self._m_obst = 0
+        self._m_obst = 3
         self._pairs = []
-        self._N = N
+        self._N = self._config.time_horizon
         if initParamMap:
             self._limits = {
                 "x": {"low": np.ones(self._nx) * -100, "high": np.ones(self._nx) * 100},
@@ -44,6 +87,7 @@ class MpcModel(object):
         self.addEntry2ParamMap("r_body", 1)
         self.addEntry2ParamMap("lower_limits", self._n)
         self.addEntry2ParamMap("upper_limits", self._n)
+        self.setObstacles()
 
     def addEntry2ParamMap(self, name, n_par):
         self._paramMap[name] = list(range(self._npar, self._npar + n_par))
@@ -56,11 +100,8 @@ class MpcModel(object):
     def setSelfCollisionAvoidance(self, pairs):
         self._pairs = pairs
 
-    def setObstacles(self, n_obst, m_obst, inCostFunction=False):
-        self._n_obst = n_obst
-        self._m_obst = m_obst
-        self.addEntry2ParamMap("obst", (m_obst + 1) * n_obst)
-        self._obstaclesInCosts = inCostFunction
+    def setObstacles(self):
+        self.addEntry2ParamMap("obst", 4 * self._config.number_obstacles)
         self.addEntry2ParamMap('wobst', 1)
 
     def extractVariables(self, z):
@@ -69,24 +110,33 @@ class MpcModel(object):
         qddot = z[self._nx + self._ns : self._nx + self._ns + self._nu]
         return q, qdot, qddot
 
+    def get_velocity(self, z):
+        return  z[self._n: self._nx]
+
     def eval_objectiveCommon(self, z, p):
-        q, qdot, *_ = self.extractVariables(z)
+        variables = self.extractVariables(z)
+        q = variables[0]
+        vel = self.get_velocity(z)
         w = p[self._paramMap["w"]]
         wvel = p[self._paramMap["wvel"]]
         g = p[self._paramMap["g"]]
         W = diagSX(w, self._m)
         Wvel = diagSX(wvel, self._nu)
-        fk_ee = self._fk.fk(q, self._n, positionOnly=True)[0:self._m]
-        Jvel = ca.dot(qdot, ca.mtimes(Wvel, qdot))
+        fk_ee = self._fk.fk(
+            q,
+            self._robot_config.root_link,
+            self._robot_config.end_link,
+            positionOnly=True
+        )
+        Jvel = ca.dot(vel, ca.mtimes(Wvel, vel))
         err = fk_ee - g
         Jx = ca.dot(err, ca.mtimes(W, err))
         Jobst = 0
         Js = 0
-        if self._obstaclesInCosts:
-            obstDistances = 1/ca.vcat(self.eval_obstacleDistances(z, p) )
-            wobst = ca.SX(np.ones(obstDistances.shape[0]) * p[self._paramMap['wobst']])
-            Wobst = diagSX(wobst, obstDistances.shape[0])
-            Jobst += ca.dot(obstDistances, ca.mtimes(Wobst, obstDistances))
+        obstDistances = 1/ca.vcat(self.eval_obstacleDistances(z, p) )
+        wobst = ca.SX(np.ones(obstDistances.shape[0]) * p[self._paramMap['wobst']])
+        Wobst = diagSX(wobst, obstDistances.shape[0])
+        Jobst += ca.dot(obstDistances, ca.mtimes(Wobst, obstDistances))
         if self._ns > 0:
             s = z[self._nx]
             ws = p[self._paramMap["ws"]]
@@ -123,9 +173,14 @@ class MpcModel(object):
         if "obst" in self._paramMap.keys():
             obsts = p[self._paramMap["obst"]]
             r_body = p[self._paramMap["r_body"]]
-            for j in range(self._n):
-                fk = self._fk.fk(q, j + 1, positionOnly=True)[0:self._m]
-                for i in range(self._n_obst):
+            for j, collision_link in enumerate(self._robot_config.collision_links):
+                fk = self._fk.fk(
+                    q,
+                    self._robot_config.root_link,
+                    collision_link,
+                    positionOnly=True
+                )[0:self._m]
+                for i in range(self._config.number_obstacles):
                     obst = obsts[i * (self._m_obst + 1) : (i + 1) * (self._m_obst + 1)]
                     x = obst[0 : self._m_obst]
                     r = obst[self._m_obst]
@@ -137,9 +192,9 @@ class MpcModel(object):
         q, *_ = self.extractVariables(z)
         r_body = p[self._paramMap["r_body"]]
         ineqs = []
-        for pair in self._pairs:
-            fk1 = self._fk.fk(q, pair[0], positionOnly=True)[0: self._m]
-            fk2 = self._fk.fk(q, pair[1], positionOnly=True)[0: self._m]
+        for pair in self._robot_config.selfCollision['pairs']:
+            fk1 = self._fk.fk(q, self._robot_config.root_link, pair[0], positionOnly=True)[0: self._m]
+            fk2 = self._fk.fk(q, self._robot_config.root_link, pair[1], positionOnly=True)[0: self._m]
             dist = ca.norm_2(fk1 - fk2)
             ineqs.append(dist - (2 * r_body))
         return ineqs
@@ -195,10 +250,13 @@ class MpcModel(object):
         self._model.npar = self._npar
         self._model.nvar = self._nx + self._nu + self._ns
         self._model.neq = self._nx
-        nbInequalities = self._n_obst * self._n + 2 * self._n + len(self._pairs)
-        self._model.nh = nbInequalities
-        self._model.hu = np.ones(nbInequalities) * np.inf
-        self._model.hl = np.zeros(nbInequalities)
+        number_inequalities = 0
+        number_inequalities += self._config.number_obstacles * len(self._robot_config.collision_links)
+        number_inequalities += len(self._robot_config.selfCollision['pairs'])
+        number_inequalities += self._n * 2
+        self._model.nh = number_inequalities
+        self._model.hu = np.ones(number_inequalities) * np.inf
+        self._model.hl = np.zeros(number_inequalities)
         self._model.ineq = self.eval_inequalities
         self._model.xinitidx = range(0, self._nx)
 

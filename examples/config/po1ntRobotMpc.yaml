@@ -1,15 +1,24 @@
 type: mpc
-n: 2
-dt: 0.05
-m: 2
-H: 20
-interval: 1
-weights:
-  w: 1.0
-  wvel: 1.0
-  ws: 1e10
-  wu: 0.1
-  wobst: 0.05
-obst:
-  nbObst: 1
-slack: False
+mpc:
+  model_name: po1ntRobot
+  n: 3
+  time_horizon: 20
+  time_step: 0.05
+  slack: False
+  interval: 1
+  weights:
+    w: 1.0
+    wvel: 1.0
+    ws: 1e10
+    wu: 0.1
+    wobst: 0.05
+  number_obstacles: 1
+robot:
+  collision_links: 
+    - base_link
+  selfCollision:
+    pairs:  []
+  urdf_file: pointRobot.urdf
+  root_link: ee_link
+  end_link: base_link
+  base_type: holonomic

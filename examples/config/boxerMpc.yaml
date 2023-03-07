@@ -1,15 +1,24 @@
 type: mpc
-n: 3
-m: 2
-dt: 0.05
-H: 20
-interval: 1
-weights:
-  w: 1.0
-  wvel: 0.05
-  ws: 1e10
-  wu: 0.02
-  wobst: 0.5
-obst:
-  nbObst: 1
-slack: False
+mpc:
+  model_name: boxer
+  n: 3
+  time_horizon: 10
+  time_step: 0.05
+  slack: False
+  interval: 1
+  weights:
+    w: 1.0
+    wvel: 0.05
+    ws: 1e10
+    wu: 0.02
+    wobst: 0.5
+  number_obstacles: 1
+robot:
+  collision_links: 
+    - ee_link
+  selfCollision:
+    pairs:  []
+  urdf_file: boxer.urdf
+  root_link: base_link
+  end_link: ee_link
+  base_type: diffdrive
