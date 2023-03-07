@@ -35,7 +35,11 @@ class PointRobotMpcExample(MpcExample):
                 [-10, 10],
                 [-10, 10],
         ])
-        self._env = gym.make('pointRobotUrdf-acc-v0', render=self._render, dt=self._planner.dt())
+        self._env = gym.make(
+            'pointRobotUrdf-acc-v0',
+            render=self._render,
+            dt=self._planner._config.time_step,
+        )
 
     def run(self):
         q0 = np.median(self._limits)
@@ -45,10 +49,9 @@ class PointRobotMpcExample(MpcExample):
         self._env.add_goal(self._goal)
         n_steps = 1000
         for i in range(n_steps):
-            q = ob['joint_state']['position'][0:2]
-            qdot = ob['joint_state']['velocity'][0:2]
+            q = ob['joint_state']['position']
+            qdot = ob['joint_state']['velocity']
             action = self._planner.computeAction(q, qdot)
-            action = np.concatenate((action, np.zeros(1)))
             ob, *_ = self._env.step(action)
 
 def main():

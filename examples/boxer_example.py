@@ -35,7 +35,11 @@ class BoxerMpcExample(MpcExample):
                 [-10, 10],
                 [-10, 10],
         ])
-        self._env = gym.make('boxer-robot-acc-v0', render=self._render, dt=self._planner.dt())
+        self._env = gym.make(
+            'boxer-robot-acc-v0',
+            render=self._render,
+            dt=self._planner._config.time_step
+        )
 
     def run(self):
         q0 = np.median(self._limits)
