@@ -6,7 +6,6 @@ authors = ["Max Spahn <m.spahn@tudelft.nl>"]
 
 [tool.poetry.dependencies]
 python = "^3.8,<3.10"
-numpy = "<1.22"
 casadi = "^3.5.4,!=3.5.5.post1,!=3.5.5.post2"
 requests = "^2.27.1"
 pyaml = "^21.10.1"
@@ -16,6 +15,7 @@ urdfenvs = {version = "^0.2.2", optional = true}
 scipy = "^1.5.0"
 forwardkinematics = "^1.1.1"
 setuptools = "^67.5.1"
+numpy = "<1.23"
 
 [tool.poetry.dev-dependencies]
 
