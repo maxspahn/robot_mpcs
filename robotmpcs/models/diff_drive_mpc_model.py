@@ -1,44 +1,7 @@
-from MotionPlanningEnv.sphereObstacle import dataclass
 import casadi as ca
-from forwardkinematics.fksCommon.fk import ForwardKinematics
-from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
 import numpy as np
-import forcespro
-import yaml
-from shutil import move
-from glob import glob
 
 from robotmpcs.models.mpcModel import MpcModel
-
-
-def diagSX(val, size):
-    a = ca.SX(size, size)
-    for i in range(size):
-        a[i, i] = val[i]
-    return a
-
-
-@dataclass
-class MpcConfiguration:
-    time_horizon: int
-    time_step: float
-    weights: dict
-    slack: bool
-    interval: int
-    number_obstacles: int
-    model_name: str
-    n: int
-
-
-@dataclass
-class RobotConfiguration:
-    collision_links: list
-    selfCollision: dict
-    urdf_file: str
-    root_link: str
-    end_link: str
-    base_type: str
-
 
 
 class MpcDiffDriveModel(MpcModel):

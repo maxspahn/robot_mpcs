@@ -1,5 +1,5 @@
-from MotionPlanningEnv.sphereObstacle import dataclass
 import casadi as ca
+from dataclasses import dataclass
 from forwardkinematics.fksCommon.fk import ForwardKinematics
 from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
 import numpy as np
@@ -26,6 +26,8 @@ class MpcConfiguration:
     number_obstacles: int
     model_name: str
     n: int
+    name: str = 'mpc'
+    debug: bool = False
 
 
 @dataclass
@@ -81,7 +83,8 @@ class MpcModel(object):
         self.addEntry2ParamMap("wu", self._nu)
         self.addEntry2ParamMap("wvel", self._n)
         self.addEntry2ParamMap("w", self._m)
-        if self._ns > 0:
+        if self._config.slack:
+            self._ns = 1
             self.addEntry2ParamMap("ws", 1)
         self.addEntry2ParamMap("g", self._m)
         self.addEntry2ParamMap("r_body", 1)
@@ -92,10 +95,6 @@ class MpcModel(object):
     def addEntry2ParamMap(self, name, n_par):
         self._paramMap[name] = list(range(self._npar, self._npar + n_par))
         self._npar += n_par
-
-    def setSlack(self):
-        self._ns = 1
-        self.addEntry2ParamMap("ws", 1)
 
     def setSelfCollisionAvoidance(self, pairs):
         self._pairs = pairs
@@ -261,12 +260,9 @@ class MpcModel(object):
         self._model.xinitidx = range(0, self._nx)
 
     def setCodeoptions(self, **kwargs):
-        debug = False
         solverName = self._modelName + "_n" + str(self._n) + "_" + str(self._dt).replace('.','') + "_H" + str(self._N)
-        if self._ns == 0:
+        if not self._config.slack:
             solverName += "_noSlack"
-        if debug in kwargs:
-            debug = kwargs.get('debug')
         if solverName in kwargs:
             solverName = kwargs.get('solverName')
         self._solverName = solverName
@@ -274,14 +270,16 @@ class MpcModel(object):
         self._codeoptions.nlp.integrator.type = "ERK2"
         self._codeoptions.nlp.integrator.Ts = self._dt
         self._codeoptions.nlp.integrator.nodes = 5
-        if debug:
-            self._codeoptions.printlevel = 1
+        if self._config.debug:
+            self._codeoptions.printlevel = 2
             self._codeoptions.optlevel = 0
         else:
             self._codeoptions.printlevel = 0
             self._codeoptions.optlevel = 3
 
     def generateSolver(self, location="./"):
+        if self._config.debug:
+            location += 'debug/'
         _ = self._model.generate_solver(self._codeoptions)
         with open(self._solverName + '/paramMap.yaml', 'w') as outfile:
             yaml.dump(self._paramMap, outfile, default_flow_style=False)
