@@ -123,7 +123,7 @@ class MPCPlanner(object):
                     obst = obsts[j]
                 else:
                     obst = EmptyObstacle()
-                for m_i in range(obst.dim()):
+                for m_i in range(obst.dimension()):
                     paramsIndexObstX = self._npar * i + self._paramMap['obst'][j * (self.m() + 1) + m_i]
                     self._params[paramsIndexObstX] = obst.position()[m_i]
                 paramsIndexObstR = self._npar * i + self._paramMap['obst'][j * (self.m() + 1) + self.m()]

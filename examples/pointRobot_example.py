@@ -1,9 +1,9 @@
 import sys
 import numpy as np
-import gym
-import urdfenvs.point_robot_urdf
-from MotionPlanningEnv.sphereObstacle import SphereObstacle
-from MotionPlanningGoal.staticSubGoal import StaticSubGoal
+import gymnasium as gym
+from urdfenvs.robots.generic_urdf import GenericUrdfReacher
+from mpscenes.obstacles.sphere_obstacle import SphereObstacle
+from mpscenes.goals.static_sub_goal import StaticSubGoal
 from mpc_example import MpcExample
 
 class PointRobotMpcExample(MpcExample):
@@ -11,23 +11,21 @@ class PointRobotMpcExample(MpcExample):
 
     def initialize_environment(self):
         staticGoalDict = {
-            "m": 2,
-            "w": 1.0,
-            "prime": True,
+            "weight": 1.0,
+            "is_primary_goal": True,
             'indices': [0, 1],
-            'parent_link': 0,
-            'child_link': self._n,
+            'parent_link': 'world',
+            'child_link': 'base_link',
             'desired_position': [8.2, -0.2],
             'epsilon': 0.2,
             'type': "staticSubGoal", 
         }
-        self._goal = StaticSubGoal(name="goal1", contentDict=staticGoalDict)
+        self._goal = StaticSubGoal(name="goal1", content_dict=staticGoalDict)
         obst1Dict = {
-            "dim": 3,
             "type": "sphere",
             "geometry": {"position": [4.0, -0.5, 0.0], "radius": 1.0},
         }
-        sphereObst1 = SphereObstacle(name="simpleSphere", contentDict=obst1Dict)
+        sphereObst1 = SphereObstacle(name="simpleSphere", content_dict=obst1Dict)
         self._obstacles = [sphereObst1]
         self._r_body = 0.3
         self._limits = np.array([
@@ -35,22 +33,24 @@ class PointRobotMpcExample(MpcExample):
                 [-10, 10],
                 [-10, 10],
         ])
-        self._env = gym.make(
-            'pointRobotUrdf-acc-v0',
-            render=self._render,
-            dt=self._planner._config.time_step,
+        robots = [
+            GenericUrdfReacher(urdf="pointRobot.urdf", mode="acc"),
+        ]
+        self._env: UrdfEnv = gym.make(
+            "urdf-env-v0",
+            dt=0.01, robots=robots, render=True,
         )
 
     def run(self):
         q0 = np.median(self._limits)
-        ob = self._env.reset(pos=q0)
+        ob, _ = self._env.reset()
         for obstacle in self._obstacles:
             self._env.add_obstacle(obstacle)
         self._env.add_goal(self._goal)
         n_steps = 1000
         for i in range(n_steps):
-            q = ob['joint_state']['position']
-            qdot = ob['joint_state']['velocity']
+            q = ob['robot_0']['joint_state']['position']
+            qdot = ob['robot_0']['joint_state']['velocity']
             action = self._planner.computeAction(q, qdot)
             ob, *_ = self._env.step(action)
 

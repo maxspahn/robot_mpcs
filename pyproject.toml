@@ -5,22 +5,30 @@ description = "MPC generation for robots using ForcesPro."
 authors = ["Max Spahn <m.spahn@tudelft.nl>"]
 
 [tool.poetry.dependencies]
-python = "^3.8,<3.10"
-casadi = "^3.5.4,!=3.5.5.post1,!=3.5.5.post2"
+python = "^3.8,<4.0"
+casadi = "^3.5.4,!=3.5.5.post1,!=3.5.5.post2,<3.6"
 requests = "^2.27.1"
 pyaml = "^21.10.1"
-motion-planning-scenes = {version = "^0.1", optional = true}
-planarenvs = {version = "^1.0.3", optional = true}
-urdfenvs = {version = "^0.2.2", optional = true}
 scipy = "^1.5.0"
-forwardkinematics = "^1.1.1"
 setuptools = "^67.5.1"
 numpy = "<1.23"
+forwardkinematics = {git = "https://github.com/maxspahn/forwardKinematics.git", rev = "develop"}
+mpscenes = "^0.4.4"
 
-[tool.poetry.dev-dependencies]
 
-[tool.poetry.extras]
-agents = ["planarenvs", "urdfenvs", "motion-planning-scenes"]
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pylint = "^2.13.4"
+pytest = "^6.2.5"
+pytest-cov = "^4.0.0"
+
+[tool.poetry.group.agents]
+optional = true
+
+[tool.poetry.group.agents.dependencies]
+urdfenvs = "^0.8"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
