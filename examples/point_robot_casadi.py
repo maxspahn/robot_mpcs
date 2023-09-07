@@ -1,7 +1,9 @@
 import sys
+import time
 import numpy as np
 import gymnasium as gym
 from urdfenvs.robots.generic_urdf import GenericUrdfReacher
+from urdfenvs.urdf_common.urdf_env import UrdfEnv
 from mpscenes.obstacles.sphere_obstacle import SphereObstacle
 from mpscenes.goals.static_sub_goal import StaticSubGoal
 from robotmpcs.models.casadi_mpc import MPCModelCasadi
@@ -13,7 +15,7 @@ class PointRobotCasadi():
         self.set_planner()
 
     def set_planner(self):
-        self._planner = MPCModelCasadi(50, 0.1)
+        self._planner = MPCModelCasadi(12, 0.1)
 
 
     def initialize_environment(self):
@@ -40,7 +42,7 @@ class PointRobotCasadi():
         ]
         self._env: UrdfEnv = gym.make(
             "urdf-env-v0",
-            dt=0.01, robots=robots, render=True,
+            dt=0.01, robots=robots, render=True, enforce_real_time=True
         )
 
     def run(self):
@@ -51,16 +53,20 @@ class PointRobotCasadi():
         n_steps = 1000
         for i in range(n_steps):
             q = ob['robot_0']['joint_state']['position']
+            t0 = time.perf_counter()
             action = self._planner.compute_action(
                     x_0=q,
                     wx=1,
                     wu=0.1,
+                    wslack=1000,
                     goal=self._goal.position(),
                     discount=1.1,
                     o_pos=self._obstacles[0].position(),
                     o_radius=self._obstacles[0].size(),
                     body_radius=0.4,
             )
+            t1 = time.perf_counter()
+            print(t1-t0)
             ob, *_ = self._env.step(action)
 
 def main():

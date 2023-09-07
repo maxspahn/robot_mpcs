@@ -35,7 +35,7 @@ class Parameters():
     def p_ca(self, name: str) -> ca.SX:
         return self._data_symbols[name]
 
-    def p_np(self, name: str) -> ca.SX:
+    def p_np(self, name: str) -> np.ndarray:
         return self._data_values[name]
     
     def all_p(self) -> ca.SX:
@@ -81,6 +81,7 @@ class MPCModelCasadi():
     def init_problem(self):
         self._x = self._problem.variable(3, self._steps + 1)
         self._u = self._problem.variable(3, self._steps)
+        self._slack = self._problem.variable(1, self._steps)
         self._problem.minimize(self.objective())
         for k in range(self._steps):
             x_next = self._x[:, k] + self._u[:, k] * self._time_step
@@ -96,13 +97,14 @@ class MPCModelCasadi():
         body_radius = self._parameters.p_ca('body_radius')
         for k in range(self._steps):
             distance = ca.norm_2(self._x[0:2, k] - o_pos[0:2]) - o_radius - body_radius
-            self._problem.subject_to(distance>0)
+            self._problem.subject_to(distance+self._slack[:, k]>0)
 
 
     def init_parameters(self):
         self._parameters = Parameters()
         self._parameters.add(self._problem, 1, 'wu', 1)
         self._parameters.add(self._problem, 1, 'wx', 1)
+        self._parameters.add(self._problem, 1, 'wslack', 1)
         self._parameters.add(self._problem, 1, 'goal', 3)
         self._parameters.add(self._problem, 1, 'x_0', 3)
         self._parameters.add(self._problem, 1, 'discount', 1)
@@ -113,6 +115,7 @@ class MPCModelCasadi():
     def objective(self) -> ca.SX:
         w_u = self._parameters.p_ca('wu')
         w_x = self._parameters.p_ca('wx')
+        w_slack = self._parameters.p_ca('wslack')
         W_x = diagMX(w_x, 3)
         W_u = diagMX(w_u, 3)
         goal = self._parameters.p_ca('goal')
@@ -123,9 +126,9 @@ class MPCModelCasadi():
         for i in range(self._steps):
             err = self._x[0:3, i+1] - goal
             J_x += discount_factor ** i * ca.dot(err, ca.mtimes(W_x, err))
-            J_s += 100 * self._s[0, i]
+            J_s += w_slack * self._slack[0, i]**2
             J_u += ca.dot(self._u[:, i], ca.mtimes(W_u, self._u[:, i]))
-        return J_x + J_u
+        return J_x + J_u + J_s
 
     def compute_action(self, **kwargs) -> np.ndarray:
         self._problem.solver('ipopt', self._options)
