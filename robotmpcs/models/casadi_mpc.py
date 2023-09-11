@@ -1,4 +1,5 @@
 from typing import Dict, List
+import logging
 import casadi as ca
 import numpy as np
 
@@ -63,6 +64,7 @@ class MPCModelCasadi():
     _options: dict
     _x: ca.SX
     _parameters: Parameters
+    _number_planes: int
 
     def __init__(self, steps: int, time_step: float):
         self._name = "Casadi_Model"
@@ -75,6 +77,7 @@ class MPCModelCasadi():
         self._problem = ca.Opti()
         self._initial_x = np.zeros((3, steps+1))
         self._initial_u = np.zeros((3, steps))
+        self._number_planes = 5
         self.init_parameters()
         self.init_problem()
 
@@ -89,9 +92,16 @@ class MPCModelCasadi():
 
         x_0 = self._parameters.p_ca('x_0')
         self._problem.subject_to(self._x[:, 0]==x_0)
-        self.set_obstacles()
+        #self.set_obstacles()
+        for i in range(self._number_planes):
+            self.set_plane(i)
+
+    def number_planes(self) -> int:
+        return self._number_planes
 
     def set_obstacles(self):
+        self._parameters.add(self._problem, 1, 'o_pos', 3)
+        self._parameters.add(self._problem, 1, 'o_radius', 1)
         o_pos = self._parameters.p_ca('o_pos')
         o_radius = self._parameters.p_ca('o_radius')
         body_radius = self._parameters.p_ca('body_radius')
@@ -99,24 +109,43 @@ class MPCModelCasadi():
             distance = ca.norm_2(self._x[0:2, k] - o_pos[0:2]) - o_radius - body_radius
             self._problem.subject_to(distance+self._slack[:, k]>0)
 
+    def set_plane(self, index_plane: int):
+        self._parameters.add(self._problem, 1, f'plane_{index_plane}', 4)
+        plane = self._parameters.p_ca(f'plane_{index_plane}')
+        body_radius = self._parameters.p_ca('body_radius')
+        for k in range(self._steps):
+            point = ca.vcat([self._x[0:2, k], 0])
+            distance = ca.fabs(ca.dot(plane[0:3], point) + plane[3]) / ca.norm_2(
+                plane[0:3]
+            )
+            self._problem.subject_to(distance-body_radius>0)
+
+    def dist_to_plane(self, q: np.ndarray, plane: np.ndarray, body_radius: float):
+        point = np.append(q, 0.0)
+        distance = np.abs(np.dot(plane[0:3], point) + plane[3]) / np.linalg.norm(plane[0:3]) - body_radius
+        if distance < 0:
+            logging.warning("Distance below 0")
+        return distance
+
+
+
+
 
     def init_parameters(self):
         self._parameters = Parameters()
         self._parameters.add(self._problem, 1, 'wu', 1)
         self._parameters.add(self._problem, 1, 'wx', 1)
         self._parameters.add(self._problem, 1, 'wslack', 1)
-        self._parameters.add(self._problem, 1, 'goal', 3)
+        self._parameters.add(self._problem, 1, 'goal', 2)
         self._parameters.add(self._problem, 1, 'x_0', 3)
         self._parameters.add(self._problem, 1, 'discount', 1)
-        self._parameters.add(self._problem, 1, 'o_pos', 3)
-        self._parameters.add(self._problem, 1, 'o_radius', 1)
         self._parameters.add(self._problem, 1, 'body_radius', 1)
 
     def objective(self) -> ca.SX:
         w_u = self._parameters.p_ca('wu')
         w_x = self._parameters.p_ca('wx')
         w_slack = self._parameters.p_ca('wslack')
-        W_x = diagMX(w_x, 3)
+        W_x = diagMX(w_x, 2)
         W_u = diagMX(w_u, 3)
         goal = self._parameters.p_ca('goal')
         J_x = 0
@@ -124,7 +153,7 @@ class MPCModelCasadi():
         J_s = 0
         discount_factor = self._parameters.p_ca('discount')
         for i in range(self._steps):
-            err = self._x[0:3, i+1] - goal
+            err = self._x[0:2, i+1] - goal
             J_x += discount_factor ** i * ca.dot(err, ca.mtimes(W_x, err))
             J_s += w_slack * self._slack[0, i]**2
             J_u += ca.dot(self._u[:, i], ca.mtimes(W_u, self._u[:, i]))
