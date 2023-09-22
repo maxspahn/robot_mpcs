@@ -12,6 +12,7 @@ def parse_setup(setup_file: str):
 
 def main(robot_type, setup_file):
     setup = parse_setup(setup_file)
+    setup['robot']['urdf_file'] = current_path = os.path.dirname(os.path.abspath(__file__)) + "/assets/boxer/" + setup['robot']['urdf_file']
     if setup['robot']['base_type'] == 'holonomic':
         mpc_model = MpcModel(initParamMap=True, **setup)
     elif setup['robot']['base_type'] == 'diffdrive':

@@ -160,7 +160,7 @@ class MpcModel(object):
         return Jx + Jvel + Js + Jobst + Ju
 
     def eval_inequalities(self, z, p):
-        all_ineqs = self.eval_obstacleDistances(z, p) + self.eval_jointLimits(z, p) + self.eval_selfCollision(z, p) + self.eval_speedLimits(z,p) + self.eval_InputLimits(z,p)
+        all_ineqs = self.eval_obstacleDistances(z, p) + self.eval_jointLimits(z, p) + self.eval_selfCollision(z, p) #+ self.eval_speedLimits(z,p) + self.eval_InputLimits(z,p)
         if self._ns > 0:
             s = z[self._nx]
             for ineq in all_ineqs:
@@ -285,8 +285,8 @@ class MpcModel(object):
         number_inequalities += self._config.number_obstacles * len(self._robot_config.collision_links)
         number_inequalities += len(self._robot_config.selfCollision['pairs'])
         number_inequalities += self._n * 2
-        number_inequalities +=  2 *2
-        number_inequalities += 2 * 2
+        #number_inequalities +=  2 *2
+        #number_inequalities += 2 * 2
         self._model.nh = number_inequalities
         self._model.hu = np.ones(number_inequalities) * np.inf
         self._model.hl = np.zeros(number_inequalities)

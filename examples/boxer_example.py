@@ -5,6 +5,8 @@ from urdfenvs.robots.generic_urdf.generic_diff_drive_robot import GenericDiffDri
 from mpscenes.obstacles.sphere_obstacle import SphereObstacle
 from mpscenes.goals.goal_composition import GoalComposition
 from mpc_example import MpcExample
+import os
+
 
 class BoxerMpcExample(MpcExample):
 
@@ -36,17 +38,18 @@ class BoxerMpcExample(MpcExample):
                 [-10, 10],
         ])
         self._limits_vel = np.array([
-                [0, 1.5],
-                [-1, 1],
+                [-np.inf, np.inf],
+                [-np.inf, np.inf],
         ])
         self._limits_u = np.array([
-                [-1, 1],
-                [-1, 1],
+                [-np.inf, np.inf],
+                [-np.inf, np.inf],
         ])
+        current_path = os.path.dirname(os.path.abspath(__file__))
         robots = [
             GenericDiffDriveRobot(
-                urdf="boxer.urdf",
-                mode="vel",
+                urdf=current_path + "/assets/boxer/boxer.urdf",
+                mode="acc",
                 actuated_wheels=["wheel_right_joint", "wheel_left_joint"],
                 castor_wheels=["rotacastor_right_joint", "rotacastor_left_joint"],
                 wheel_radius=0.08,
