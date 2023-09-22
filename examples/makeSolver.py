@@ -10,8 +10,10 @@ def parse_setup(setup_file: str):
         setup = yaml.safe_load(setup_stream)
     return setup
 
+
 def main(robot_type, setup_file):
     setup = parse_setup(setup_file)
+    setup['robot']['urdf_file'] = current_path = os.path.dirname(os.path.abspath(__file__)) + "/assets/boxer/" + setup['robot']['urdf_file']
     if setup['robot']['base_type'] == 'holonomic':
         mpc_model = MpcModel(initParamMap=True, **setup)
     elif setup['robot']['base_type'] == 'diffdrive':
@@ -22,7 +24,7 @@ def main(robot_type, setup_file):
     mpc_model.generateSolver(location=path_to_solvers)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 2 and not input:
         print("Please provide a config file for solver generation.")
     else:
         robot_type = re.findall('\/(\S*)M', sys.argv[1])[0]

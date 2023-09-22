@@ -1,11 +1,18 @@
+import os
 import casadi as ca
 from dataclasses import dataclass
 from forwardkinematics.fksCommon.fk import ForwardKinematics
 from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
 import numpy as np
+import sys
+sys.path.append("../")
+sys.path.append("")
+from examples.helpers import load_forces_path
+from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
+load_forces_path()
 import forcespro
 import yaml
-from shutil import move
+from shutil import move, rmtree
 from glob import glob
 
 
@@ -26,9 +33,9 @@ class MpcConfiguration:
     number_obstacles: int
     model_name: str
     n: int
+    control_mode: str
     name: str = 'mpc'
     debug: bool = False
-
 
 @dataclass
 class RobotConfiguration:
@@ -90,6 +97,10 @@ class MpcModel(object):
         self.addEntry2ParamMap("r_body", 1)
         self.addEntry2ParamMap("lower_limits", self._n)
         self.addEntry2ParamMap("upper_limits", self._n)
+        self.addEntry2ParamMap("lower_limits_vel", 2)
+        self.addEntry2ParamMap("upper_limits_vel", 2)
+        self.addEntry2ParamMap("lower_limits_u", 2)
+        self.addEntry2ParamMap("upper_limits_u", 2)
         self.setObstacles()
 
     def addEntry2ParamMap(self, name, n_par):
@@ -155,7 +166,7 @@ class MpcModel(object):
         return Jx + Jvel + Js + Jobst + Ju
 
     def eval_inequalities(self, z, p):
-        all_ineqs = self.eval_obstacleDistances(z, p) + self.eval_jointLimits(z, p) + self.eval_selfCollision(z, p)
+        all_ineqs = self.eval_obstacleDistances(z, p) + self.eval_jointLimits(z, p) + self.eval_selfCollision(z, p) + self.eval_speedLimits(z,p) + self.eval_InputLimits(z,p)
         if self._ns > 0:
             s = z[self._nx]
             for ineq in all_ineqs:
@@ -198,6 +209,20 @@ class MpcModel(object):
             ineqs.append(dist - (2 * r_body))
         return ineqs
 
+    def eval_speedLimits(self, z, p):
+        # Parameters in state boundaries?
+        q, qdot, _ = self.extractVariables(z)
+        vel = qdot[-2:]
+        lower_limits = p[self._paramMap["lower_limits_vel"]]
+        upper_limits = p[self._paramMap["upper_limits_vel"]]
+        ineqs = []
+        for j in range(2):
+            dist_lower = vel[j] - lower_limits[j]
+            dist_upper = upper_limits[j] - vel[j]
+            ineqs.append(dist_lower)
+            ineqs.append(dist_upper)
+        return ineqs
+
     def eval_jointLimits(self, z, p):
         # Parameters in state boundaries?
         q, *_ = self.extractVariables(z)
@@ -207,6 +232,19 @@ class MpcModel(object):
         for j in range(self._n):
             dist_lower = q[j] - lower_limits[j]
             dist_upper = upper_limits[j] - q[j]
+            ineqs.append(dist_lower)
+            ineqs.append(dist_upper)
+        return ineqs
+
+    def eval_InputLimits(self, z, p):
+        # Parameters in state boundaries?
+        u = z[-self._nu:]
+        lower_limits = p[self._paramMap["lower_limits_u"]]
+        upper_limits = p[self._paramMap["upper_limits_u"]]
+        ineqs = []
+        for j in range(2):
+            dist_lower = u[j] - lower_limits[j]
+            dist_upper = upper_limits[j] - u[j]
             ineqs.append(dist_lower)
             ineqs.append(dist_upper)
         return ineqs
@@ -253,6 +291,8 @@ class MpcModel(object):
         number_inequalities += self._config.number_obstacles * len(self._robot_config.collision_links)
         number_inequalities += len(self._robot_config.selfCollision['pairs'])
         number_inequalities += self._n * 2
+        number_inequalities +=  2 *2
+        number_inequalities += 2 * 2
         self._model.nh = number_inequalities
         self._model.hu = np.ones(number_inequalities) * np.inf
         self._model.hl = np.zeros(number_inequalities)
@@ -286,6 +326,8 @@ class MpcModel(object):
         properties = {"nx": self._nx, "nu": self._nu, "npar": self._npar, "ns": self._ns, "m": self._m}
         with open(self._solverName + '/properties.yaml', 'w') as outfile:
             yaml.dump(properties, outfile, default_flow_style=False)
+        if os.path.exists(location + self._solverName) and os.path.isdir(location + self._solverName):
+            rmtree(location + self._solverName)
         move(self._solverName, location + self._solverName)
         for file in glob(r'*.forces'):
             move(file, location)

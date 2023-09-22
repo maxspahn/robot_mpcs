@@ -38,4 +38,6 @@ class MpcExample(object):
         self._planner.setObstacles(self._obstacles, self._r_body)
         self._planner.setGoal(self._goal)
         self._planner.setJointLimits(np.transpose(self._limits))
+        # self._planner.setSpeedLimits(np.transpose(self._limits_vel))
+        # self._planner.setInputLimits(np.transpose(self._limits_u))
 
