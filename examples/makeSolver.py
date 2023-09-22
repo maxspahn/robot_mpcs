@@ -10,6 +10,7 @@ def parse_setup(setup_file: str):
         setup = yaml.safe_load(setup_stream)
     return setup
 
+
 def main(robot_type, setup_file):
     setup = parse_setup(setup_file)
     setup['robot']['urdf_file'] = current_path = os.path.dirname(os.path.abspath(__file__)) + "/assets/boxer/" + setup['robot']['urdf_file']
