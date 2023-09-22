@@ -4,6 +4,12 @@ from dataclasses import dataclass
 from forwardkinematics.fksCommon.fk import ForwardKinematics
 from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
 import numpy as np
+import sys
+sys.path.append("../")
+sys.path.append("")
+from examples.helpers import load_forces_path
+from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
+load_forces_path()
 import forcespro
 import yaml
 from shutil import move, rmtree
@@ -27,9 +33,9 @@ class MpcConfiguration:
     number_obstacles: int
     model_name: str
     n: int
+    control_mode: str
     name: str = 'mpc'
     debug: bool = False
-
 
 @dataclass
 class RobotConfiguration:
