@@ -223,7 +223,7 @@ class MPCPlanner(object):
         problem["x0"] = self._x0.flatten()[:]
         problem["all_parameters"] = self._params
         # debug
-        debug = False
+        debug = True
         if debug:
             nbPar = int(len(self._params)/self._config.time_horizon)
             if self._config.slack:

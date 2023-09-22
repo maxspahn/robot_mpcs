@@ -10,7 +10,6 @@ import os
 
 class BoxerMpcExample(MpcExample):
 
-
     def initialize_environment(self):
         goal_dict = {
             "subgoal0": {
