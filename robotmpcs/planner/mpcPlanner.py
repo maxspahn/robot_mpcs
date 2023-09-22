@@ -5,8 +5,9 @@ import sys
 import forcespro
 import re
 import robotmpcs
-from robotmpcs.models.mpcModel import MpcConfiguration
+from robotmpcs.models.mpcModel import MpcConfiguration, MpcModel
 
+from robotmpcs.models.diff_drive_mpc_model import MpcDiffDriveModel
 
 
 class SolverDoesNotExistError(Exception):
@@ -123,7 +124,7 @@ class MPCPlanner(object):
                     obst = obsts[j]
                 else:
                     obst = EmptyObstacle()
-                for m_i in range(obst.dim()):
+                for m_i in range(obst.dimension()):
                     paramsIndexObstX = self._npar * i + self._paramMap['obst'][j * (self.m() + 1) + m_i]
                     self._params[paramsIndexObstX] = obst.position()[m_i]
                 paramsIndexObstR = self._npar * i + self._paramMap['obst'][j * (self.m() + 1) + self.m()]
@@ -162,13 +163,33 @@ class MPCPlanner(object):
                     self._npar * i + self._paramMap["upper_limits"][j]
                 ] = limits[1][j]
 
+    def setSpeedLimits(self, limits_vel):
+        for i in range(self._config.time_horizon):
+            for j in range(2):
+                self._params[
+                    self._npar * i + self._paramMap["lower_limits_vel"][j]
+                ] = limits_vel[0][j]
+                self._params[
+                    self._npar * i + self._paramMap["upper_limits_vel"][j]
+                ] = limits_vel[1][j]
+
+    def setInputLimits(self, limits_u):
+        for i in range(self._config.time_horizon):
+            for j in range(2):
+                self._params[
+                    self._npar * i + self._paramMap["lower_limits_u"][j]
+                ] = limits_u[0][j]
+                self._params[
+                    self._npar * i + self._paramMap["upper_limits_u"][j]
+                ] = limits_u[1][j]
+
     def setGoal(self, goal):
         for i in range(self._config.time_horizon):
             for j in range(self.m()):
-                if j >= len(goal.position()):
+                if j >= len(goal.primary_goal().position()):
                     position = 0
                 else:
-                    position = goal.position()[j]
+                    position = goal.primary_goal().position()[j]
                 self._params[self._npar * i + self._paramMap["g"][j]] = position
     def concretize(self):
         pass
@@ -202,17 +223,30 @@ class MPCPlanner(object):
         problem["x0"] = self._x0.flatten()[:]
         problem["all_parameters"] = self._params
         # debug
-        debug = False
+        debug = True
         if debug:
             nbPar = int(len(self._params)/self._config.time_horizon)
             if self._config.slack:
                 z = np.concatenate((self._xinit, np.array([self._slack])))
             else:
-                z = self._xinit
+                z = self._x0[0,:]
             p = self._params[0:nbPar]
+            setup_file = '/home/luzia/code/workspaces/airlab_ws/src/robot_mpcs/examples/config/boxer2Mpc.yaml'
+            with open(setup_file, "r") as setup_stream:
+                setup = yaml.safe_load(setup_stream)
+            if setup['robot']['base_type'] == 'holonomic':
+                mpc_model = MpcModel(initParamMap=True, **setup)
+            elif setup['robot']['base_type'] == 'diffdrive':
+                mpc_model = MpcDiffDriveModel(initParamMap=True, **setup)
             #J = eval_obj(z, p)
-            ineq = eval_ineq(z, p)
-            #print("ineq : ", ineq)
+            #ineq = eval_ineq(z, p)
+            self._n = 3
+            q = z[0: self._n]
+            qdot = z[self._n: self._nx]
+            qddot = z[self._nx + self._ns: self._nx + self._ns + self._nu]
+            #Jx, Jvel, Js, Jobst = mpc_model.eval_objective(z, p)
+            #mpc_model.eval_objective( z, p)
+            print("test")
             # __import__('pdb').set_trace()
             """
             for i in range(self._config.time_horizon):

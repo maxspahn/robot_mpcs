@@ -22,7 +22,7 @@ def main(robot_type, setup_file):
     mpc_model.generateSolver(location=path_to_solvers)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 2 and not input:
         print("Please provide a config file for solver generation.")
     else:
         robot_type = re.findall('\/(\S*)M', sys.argv[1])[0]
