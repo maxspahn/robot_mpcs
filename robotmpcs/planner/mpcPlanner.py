@@ -2,6 +2,11 @@ import numpy as np
 import yaml
 import os
 import sys
+sys.path.append("../")
+sys.path.append("")
+from examples.helpers import load_forces_path
+from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
+load_forces_path()
 import forcespro
 import re
 import robotmpcs
@@ -231,13 +236,6 @@ class MPCPlanner(object):
             else:
                 z = self._x0[0,:]
             p = self._params[0:nbPar]
-            setup_file = '/home/luzia/code/workspaces/airlab_ws/src/robot_mpcs/examples/config/boxer2Mpc.yaml'
-            with open(setup_file, "r") as setup_stream:
-                setup = yaml.safe_load(setup_stream)
-            if setup['robot']['base_type'] == 'holonomic':
-                mpc_model = MpcModel(initParamMap=True, **setup)
-            elif setup['robot']['base_type'] == 'diffdrive':
-                mpc_model = MpcDiffDriveModel(initParamMap=True, **setup)
             #J = eval_obj(z, p)
             #ineq = eval_ineq(z, p)
             self._n = 3
@@ -265,7 +263,14 @@ class MPCPlanner(object):
             key1 = 'x01'
         elif self._config.time_horizon >= 100:
             key1 = 'x001'
-        action = output[key1][-self._nu :]
+        # If in velocity mode, the action should be velocities instead of accelerations
+        if self._config.control_mode == "vel":
+            action = output[key1][-self._nu-self._nu: -self._nu]
+        elif self._config.control_mode == "acc":
+            action = output[key1][-self._nu:]
+        else:
+            print("No valid control mode specified!")
+            action = np.zeros((self._nu))
         if self._config.slack:
             self._slack = output[key1][self._nx]
             if self._slack > 1e-3:
