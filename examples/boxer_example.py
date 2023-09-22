@@ -48,7 +48,7 @@ class BoxerMpcExample(MpcExample):
         robots = [
             GenericDiffDriveRobot(
                 urdf=current_path + "/assets/boxer/boxer.urdf",
-                mode="vel",
+                mode="acc",
                 actuated_wheels=["wheel_right_joint", "wheel_left_joint"],
                 castor_wheels=["rotacastor_right_joint", "rotacastor_left_joint"],
                 wheel_radius=0.08,

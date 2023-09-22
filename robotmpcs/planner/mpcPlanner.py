@@ -258,11 +258,11 @@ class MPCPlanner(object):
         if exitflag < 0:
             print(exitflag)
         if self._config.time_horizon < 10:
-            key1 = 'x1'
+            key1 = 'x2'
         elif self._config.time_horizon >= 10 and self._config.time_horizon < 100:
-            key1 = 'x01'
+            key1 = 'x02'
         elif self._config.time_horizon >= 100:
-            key1 = 'x001'
+            key1 = 'x002'
         # If in velocity mode, the action should be velocities instead of accelerations
         if self._config.control_mode == "vel":
             action = output[key1][-self._nu-self._nu: -self._nu]
