@@ -23,7 +23,7 @@ robot:
       -
         - 'panda_link3'
         - 'panda_link7'
-  urdf_file: panda.urdf
+  urdf_file: panda_fk.urdf
   root_link: panda_link0
-  end_link: panda_link7
+  end_link: panda_link8
   base_type: holonomic

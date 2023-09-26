@@ -7,11 +7,11 @@ mpc:
   slack: False
   interval: 1
   weights:
-    w: 1.0
+    w: 5.0
     wvel: 0.05
     ws: 1e10
     wu: 0.02
-    wobst: 0.5
+    wobst: 0.05
   number_obstacles: 1
 robot:
   collision_links: 

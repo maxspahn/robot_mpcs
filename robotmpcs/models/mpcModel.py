@@ -127,7 +127,6 @@ class MpcModel(object):
             self._robot_config.end_link,
             positionOnly=True
         )
-        breakpoint()
         Jvel = ca.dot(vel, ca.mtimes(Wvel, vel))
         err = fk_ee - g
         Jx = ca.dot(err, ca.mtimes(W, err))

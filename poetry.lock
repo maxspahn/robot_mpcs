@@ -1699,23 +1699,30 @@ pyyaml = "*"
 
 [[package]]
 name = "urdfenvs"
-version = "0.8.15"
+version = "0.8.16"
 description = "Simple simulation environment for robots, based on the urdf files."
 optional = false
-python-versions = ">=3.8,<4.0"
-files = [
-    {file = "urdfenvs-0.8.15-py3-none-any.whl", hash = "sha256:c275e208853d4b70ca8eeb740f12dd3b615651f779e5de486c89ba67c2a38fd3"},
-    {file = "urdfenvs-0.8.15.tar.gz", hash = "sha256:9ff67d847a2ea6dacaac11ef46d1ace56c425cb6041a22f63b7e7f88c43d54b9"},
-]
+python-versions = "^3.8"
+files = []
+develop = false
 
 [package.dependencies]
-deprecation = ">=2.1.0,<3.0.0"
-dill = ">=0.3.7,<0.4.0"
-gymnasium = ">=0.28.1,<0.29.0"
-mpscenes = ">=0.4.4,<0.5.0"
-numpy = ">=1.19,<1.24"
-pybullet = ">=3.2.1,<4.0.0"
-yourdfpy = ">=0.0.52,<0.0.53"
+deprecation = "^2.1.0"
+dill = "^0.3.7"
+gymnasium = "^0.28.1"
+mpscenes = "^0.4.4"
+numpy = "^1.19,<1.24"
+pybullet = "^3.2.1"
+yourdfpy = "^0.0.52"
+
+[package.extras]
+keyboard = []
+
+[package.source]
+type = "git"
+url = "https://github.com/maxspahn/gym_envs_urdf.git"
+reference = "develop"
+resolved_reference = "98e7b6f53803c7942e753b84b71d93a2c3cd3841"
 
 [[package]]
 name = "urllib3"
@@ -1950,4 +1957,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8,<4.0"
-content-hash = "2a78e157adae7098ec1fed36b517a03fe8f2d39b2bba6ce961f56d5fad6c30a3"
+content-hash = "ecd6119bec0c7bc7d19446da80ca319f4bc233dde7127aa7937c574770704443"

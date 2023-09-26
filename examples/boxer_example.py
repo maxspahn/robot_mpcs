@@ -64,13 +64,11 @@ class BoxerMpcExample(MpcExample):
         for obstacle in self._obstacles:
             self._env.add_obstacle(obstacle)
         self._env.add_goal(self._goal)
-        n_steps = 10
+        n_steps = 1000
         for i in range(n_steps):
             q = ob['robot_0']['joint_state']['position']
             qdot = ob['robot_0']['joint_state']['velocity']
-            #q[2] = q[2] - np.pi/2
             vel = np.array((ob['robot_0']['joint_state']['forward_velocity'], qdot[2]), dtype=float)
-            print(q)
             #print(fk.fk(q, 'base_link', 'ee_link', positionOnly=True))
             action = self._planner.computeAction(q, qdot, vel)
             ob, *_ = self._env.step(action)
