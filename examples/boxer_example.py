@@ -1,33 +1,33 @@
 import sys
 import numpy as np
-import gym
-import urdfenvs.boxer_robot
-from MotionPlanningEnv.sphereObstacle import SphereObstacle
-from MotionPlanningGoal.staticSubGoal import StaticSubGoal
+import gymnasium as gym
+from mpscenes.obstacles.sphere_obstacle import SphereObstacle
+from mpscenes.goals.static_sub_goal import StaticSubGoal
+from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
+from urdfenvs.robots.generic_urdf.generic_diff_drive_robot import GenericDiffDriveRobot
 from mpc_example import MpcExample
 
 class BoxerMpcExample(MpcExample):
 
 
+
     def initialize_environment(self):
         staticGoalDict = {
-            "m": 2,
-            "w": 1.0,
-            "prime": True,
+            "weight": 1.0,
+            "is_primary_goal": True,
             'indices': [0, 1],
             'parent_link': 0,
             'child_link': self._n,
-            'desired_position': [8.2, -0.2],
+            'desired_position': [2, -2],
             'epsilon': 0.2,
             'type': "staticSubGoal", 
         }
-        self._goal = StaticSubGoal(name="goal1", contentDict=staticGoalDict)
+        self._goal = StaticSubGoal(name="goal1", content_dict=staticGoalDict)
         obst1Dict = {
-            "dim": 3,
             "type": "sphere",
             "geometry": {"position": [4.0, -0.5, 0.0], "radius": 1.0},
         }
-        sphereObst1 = SphereObstacle(name="simpleSphere", contentDict=obst1Dict)
+        sphereObst1 = SphereObstacle(name="simpleSphere", content_dict=obst1Dict)
         self._obstacles = [sphereObst1]
         self._r_body = 0.6
         self._limits = np.array([
@@ -35,23 +35,43 @@ class BoxerMpcExample(MpcExample):
                 [-10, 10],
                 [-10, 10],
         ])
+        robots = [
+            GenericDiffDriveRobot(
+                urdf="boxer.urdf",
+                mode="acc",
+                actuated_wheels=["wheel_right_joint", "wheel_left_joint"],
+                castor_wheels=["rotacastor_right_joint", "rotacastor_left_joint"],
+                wheel_radius = 0.08,
+                wheel_distance = 0.494,
+                spawn_rotation=np.pi/2,
+            ),
+        ]
         self._env = gym.make(
-            'boxer-robot-acc-v0',
-            render=self._render,
-            dt=self._planner._config.time_step
+            "urdf-env-v0",
+            dt=0.05, robots=robots, render=True
         )
 
     def run(self):
-        q0 = np.median(self._limits)
-        ob = self._env.reset(pos=q0)
+        with open('boxer_fk.urdf', 'r') as f:
+            urdf = f.read()
+        fk = GenericURDFFk(
+            urdf,
+            'base_link',
+            'ee_link',
+            base_type='diffdrive',
+        )
+        ob, _ = self._env.reset()
         for obstacle in self._obstacles:
             self._env.add_obstacle(obstacle)
         self._env.add_goal(self._goal)
-        n_steps = 1000
+        n_steps = 10
         for i in range(n_steps):
-            q = ob['joint_state']['position']
-            qdot = ob['joint_state']['velocity']
-            vel = np.array((ob['joint_state']['forward_velocity'], qdot[2]), dtype=float)
+            q = ob['robot_0']['joint_state']['position']
+            qdot = ob['robot_0']['joint_state']['velocity']
+            #q[2] = q[2] - np.pi/2
+            vel = np.array((ob['robot_0']['joint_state']['forward_velocity'], qdot[2]), dtype=float)
+            print(q)
+            #print(fk.fk(q, 'base_link', 'ee_link', positionOnly=True))
             action = self._planner.computeAction(q, qdot, vel)
             ob, *_ = self._env.step(action)
 

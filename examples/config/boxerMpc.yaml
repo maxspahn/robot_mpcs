@@ -18,7 +18,7 @@ robot:
     - ee_link
   selfCollision:
     pairs:  []
-  urdf_file: boxer.urdf
+  urdf_file: boxer_fk.urdf
   root_link: base_link
   end_link: ee_link
   base_type: diffdrive
