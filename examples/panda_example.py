@@ -1,33 +1,64 @@
 import sys
+import os
 import numpy as np
-import gym
-import urdfenvs.panda_reacher
-from MotionPlanningEnv.sphereObstacle import SphereObstacle
-from MotionPlanningGoal.staticSubGoal import StaticSubGoal
+import gymnasium as gym
+# import urdfenvs.panda_reacher
+# from MotionPlanningEnv.sphereObstacle import SphereObstacle
+# from MotionPlanningGoal.staticSubGoal import StaticSubGoal
+from urdfenvs.urdf_common.urdf_env import UrdfEnv
+from urdfenvs.robots.generic_urdf import GenericUrdfReacher
+from urdfenvs.sensors.full_sensor import FullSensor
+from mpscenes.goals.goal_composition import GoalComposition
+from mpscenes.obstacles.sphere_obstacle import SphereObstacle
 from mpc_example import MpcExample
 
 class PandaMpcExample(MpcExample):
 
 
     def initialize_environment(self):
-        staticGoalDict = {
-            "m": 3,
-            "w": 1.0,
-            "prime": True,
-            'indices': [0, 1, 2],
-            'parent_link': 'panda_link0',
-            'child_link': 'panda_link7',
-            'desired_position': [-0.3, -0.4, 0.2],
-            'epsilon': 0.02,
-            'type': "staticSubGoal", 
+        current_path = os.path.dirname(os.path.abspath(__file__))
+        robots = [
+            GenericUrdfReacher(urdf="assets/panda/panda.urdf", mode="acc"),
+        ]
+        self._env = gym.make(
+            "urdf-env-v0",
+             render=self._render,
+             dt=self._planner._config.time_step,
+             robots=robots)
+        full_sensor = FullSensor(
+            goal_mask=["position", "weight"],
+            obstacle_mask=["position", "size"],
+            variance=0.0,
+        )
+
+        goal_dict = {
+            "subgoal0": {
+                "weight": 1.0,
+                "is_primary_goal": True,
+                "indices": [0, 1, 2],
+                "parent_link": "panda_link0",
+                "child_link": "panda_hand",
+                "desired_position": [0.1, -0.6, 0.4],
+                "epsilon": 0.05,
+                "type": "staticSubGoal",
+            },
+            "subgoal1": {
+                "weight": 5.0,
+                "is_primary_goal": False,
+                "indices": [0, 1, 2],
+                "parent_link": "panda_link7",
+                "child_link": "panda_hand",
+                "desired_position": [0.1, 0.0, 0.0],
+                "epsilon": 0.05,
+                "type": "staticSubGoal",
+            }
         }
-        self._goal = StaticSubGoal(name="goal1", contentDict=staticGoalDict)
-        obst1Dict = {
-            "dim": 3,
+        self._goal = GoalComposition(name="goal", content_dict=goal_dict)
+        static_obst_dict = {
             "type": "sphere",
-            "geometry": {"position": [0.1, -0.3, 0.3], "radius": 0.15},
+            "geometry": {"position": [0.5, -0.3, 0.3], "radius": 0.1},
         }
-        sphereObst1 = SphereObstacle(name="simpleSphere", contentDict=obst1Dict)
+        sphereObst1 = SphereObstacle(name="staticObst", content_dict=static_obst_dict)
         self._obstacles = [sphereObst1]
         self._r_body = 0.14
         self._limits = np.array([
@@ -39,26 +70,31 @@ class PandaMpcExample(MpcExample):
                 [-0.0175, 3.7525],
                 [-2.8973, 2.8973]
         ])
-        self._env = gym.make(
-            'panda-reacher-acc-v0',
-             render=self._render,
-             dt=self._planner._config.time_step)
 
-    def run(self):
-        q0 = np.median(self._limits)
-        ob = self._env.reset(pos=q0)
+        self._goal = GoalComposition(name="goal", content_dict=goal_dict)
+        pos0 = np.median(self._limits, axis = 1)
+        # vel0 = np.array([0.1, 0.0, 0.0])
+        self._env.reset(pos=pos0)
+        self._env.add_sensor(full_sensor, [0])
+        self._env.add_goal(self._goal.sub_goals()[0])
         for obstacle in self._obstacles:
             self._env.add_obstacle(obstacle)
-        self._env.add_goal(self._goal)
+        self._env.set_spaces()
+
+    def run(self):
+        action = np.zeros((7,))
+        ob, *_ = self._env.step(action)
         n_steps = 1000
         for i in range(n_steps):
-            q = ob['joint_state']['position']
-            qdot = ob['joint_state']['velocity']
+            q = ob["robot_0"]['joint_state']['position']
+            qdot = ob["robot_0"]['joint_state']['velocity']
             action = self._planner.computeAction(q, qdot)
             ob, *_ = self._env.step(action)
 
 def main():
-    panda_example = PandaMpcExample(sys.argv[1])
+    robot_type = "panda" #options: boxer, po1ntRobot, panda
+    setup_file = 'config/' + str(robot_type) + "Mpc.yaml"
+    panda_example = PandaMpcExample(setup_file)
     panda_example.initialize_environment()
     panda_example.set_mpc_parameter()
     panda_example.run()

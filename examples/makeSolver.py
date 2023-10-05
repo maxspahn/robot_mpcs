@@ -10,10 +10,9 @@ def parse_setup(setup_file: str):
         setup = yaml.safe_load(setup_stream)
     return setup
 
-
 def main(robot_type, setup_file):
     setup = parse_setup(setup_file)
-    setup['robot']['urdf_file'] = current_path = os.path.dirname(os.path.abspath(__file__)) + "/assets/boxer/" + setup['robot']['urdf_file']
+    setup['robot']['urdf_file'] = current_path = os.path.dirname(os.path.abspath(__file__)) + "/assets/"+str(robot_type)+"/" + setup['robot']['urdf_file']
     if setup['robot']['base_type'] == 'holonomic':
         mpc_model = MpcModel(initParamMap=True, **setup)
     elif setup['robot']['base_type'] == 'diffdrive':
@@ -24,8 +23,13 @@ def main(robot_type, setup_file):
     mpc_model.generateSolver(location=path_to_solvers)
 
 if __name__ == "__main__":
+    robot_type = "po1ntRobot" #options: boxer, po1ntRobot, panda
+    """ Commented out by Saray:
     if len(sys.argv) < 2 and not input:
         print("Please provide a config file for solver generation.")
+        sys.argv.append('config/' + str(robot_type) + "Mpc.yaml")
     else:
-        robot_type = re.findall('\/(\S*)M', sys.argv[1])[0]
-        main(robot_type, sys.argv[1])
+    robot_type = re.findall('\/(\S*)M', sys.argv[1])[0]
+    """
+    setup_file = 'config/' + str(robot_type) + "Mpc.yaml"
+    main(robot_type, setup_file=setup_file)
