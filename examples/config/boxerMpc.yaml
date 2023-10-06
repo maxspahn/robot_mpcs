@@ -3,14 +3,14 @@ mpc:
   model_name: boxer
   n: 3
   time_horizon: 10
-  time_step: 0.05
+  time_step: 0.1
   slack: False
   interval: 1
   weights:
     w: 1.0
-    wvel: 0.05
+    wvel: [0.0, 0.0, 0.0, 0.01, 0.01]
     ws: 1e10
-    wu: 0.02
+    wu: 0.01
     wobst: 0.5
   number_obstacles: 1
   control_mode: "acc"

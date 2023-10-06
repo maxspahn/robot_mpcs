@@ -10,7 +10,9 @@ load_forces_path()
 import forcespro
 import re
 import robotmpcs
-from robotmpcs.models.mpcModel import MpcConfiguration, MpcModel
+from robotmpcs.models.mpcBase import MpcConfiguration
+from robotmpcs.models.mpcModel import MpcModel
+
 
 from robotmpcs.models.diff_drive_mpc_model import MpcDiffDriveModel
 
@@ -43,6 +45,9 @@ class MPCPlanner(object):
     def __init__(self, robotType, solversDir, **kwargs):
         self._config = MpcConfiguration(**kwargs)
         self._robotType = robotType
+
+
+        #self._visualizer.add_visualization()
         """
         self._paramMap, self._npar, self._nx, self._nu, self._ns = getParameterMap(
             self_config.n, self.m(), self._config.number_obstacles, self.m(), self._config.slack
@@ -89,15 +94,14 @@ class MPCPlanner(object):
         self._xinit = np.zeros(self._nx)
         if self._config.slack:
             self._slack = 0.0
-        self._x0[-1, -1] = 0.1
+        #self._x0[-1, -1] = 0.1 # todo why?
         self._params = np.zeros(shape=(self._npar * self._config.time_horizon), dtype=float)
         for i in range(self._config.time_horizon):
             self._params[
                 [self._npar * i + val for val in self._paramMap["w"]]
             ] = self._config.weights["w"]
-            self._params[
-                [self._npar * i + val for val in self._paramMap["wvel"]]
-            ] = self._config.weights["wvel"]
+            for j, val in enumerate(self._paramMap["wvel"]):
+                self._params[[self._npar * i + val]] = self._config.weights["wvel"][j]
             self._params[
                 [self._npar * i + val for val in self._paramMap["wu"]]
             ] = self._config.weights["wu"]
@@ -120,7 +124,7 @@ class MPCPlanner(object):
             return False
 
 
-    def setObstacles(self, obsts, r_body):
+    def setObstacles(self, obsts, r_body): #todo: need to be updated
         self._r = 0.1
         for i in range(self._config.time_horizon):
             self._params[self._npar * i + self._paramMap["r_body"][0]] = r_body
@@ -258,16 +262,19 @@ class MPCPlanner(object):
         if exitflag < 0:
             print(exitflag)
         if self._config.time_horizon < 10:
+            key0 = 'x1'
             key1 = 'x2'
         elif self._config.time_horizon >= 10 and self._config.time_horizon < 100:
+            key0 = 'x01'
             key1 = 'x02'
         elif self._config.time_horizon >= 100:
+            key0 = 'x001'
             key1 = 'x002'
         # If in velocity mode, the action should be velocities instead of accelerations
         if self._config.control_mode == "vel":
             action = output[key1][-self._nu-self._nu: -self._nu]
         elif self._config.control_mode == "acc":
-            action = output[key1][-self._nu:]
+            action = output[key0][-self._nu:]
         else:
             print("No valid control mode specified!")
             action = np.zeros((self._nu))
@@ -278,7 +285,7 @@ class MPCPlanner(object):
         # print('action : ', action)
         # print("prediction : ", output["x02"][0:self._nx])
         self.shiftHorizon(output, ob)
-        return action, info
+        return action, output, info
 
     def concretize(self):
         self._actionCounter = self._config.interval
@@ -286,9 +293,9 @@ class MPCPlanner(object):
     def computeAction(self, *args):
         ob = np.concatenate(args)
         if self._actionCounter >= self._config.interval:
-            self._action, info = self.solve(ob)
+            self._action, output, info = self.solve(ob)
             self._actionCounter = 1
         else:
             self._actionCounter += 1
-        return self._action
+        return self._action, output
 

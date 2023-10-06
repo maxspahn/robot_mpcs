@@ -23,7 +23,7 @@ def main(robot_type, setup_file):
     mpc_model.generateSolver(location=path_to_solvers)
 
 if __name__ == "__main__":
-    robot_type = "po1ntRobot" #options: boxer, po1ntRobot, panda
+    robot_type = "boxer" #options: boxer, po1ntRobot, panda
     """ Commented out by Saray:
     if len(sys.argv) < 2 and not input:
         print("Please provide a config file for solver generation.")

@@ -14,68 +14,23 @@ import forcespro
 import yaml
 from shutil import move, rmtree
 from glob import glob
-
-
-def diagSX(val, size):
-    a = ca.SX(size, size)
-    for i in range(size):
-        a[i, i] = val[i]
-    return a
-
-
-@dataclass
-class MpcConfiguration:
-    time_horizon: int
-    time_step: float
-    weights: dict
-    slack: bool
-    interval: int
-    number_obstacles: int
-    model_name: str
-    n: int
-    control_mode: str
-    name: str = 'mpc'
-    debug: bool = False
-
-@dataclass
-class RobotConfiguration:
-    collision_links: list
-    selfCollision: dict
-    urdf_file: str
-    root_link: str
-    end_link: str
-    base_type: str
+from robotmpcs.models.mpcBase import MpcBase
+from robotmpcs.models.objectives.goal_mpc_objective import GoalMpcObjective
 
 
 
-class MpcModel(object):
+
+
+
+
+
+
+class MpcModel(MpcBase):
     def __init__(self, initParamMap=True, **kwargs):
-        self._config = MpcConfiguration(**kwargs['mpc'])
-        self._robot_config = RobotConfiguration(**kwargs['robot'])
-        with open(self._robot_config.urdf_file, 'r') as f:
-            urdf = f.read()
-        self._modelName = self._config.model_name
-        self._fk = GenericURDFFk(
-            urdf,
-            self._robot_config.root_link,
-            self._robot_config.end_link,
-            base_type=self._robot_config.base_type,
-        )
-        self._m = 3
-        self._dt = self._config.time_step
-        if self._robot_config.base_type == 'holonomic':
-            self._n = self._fk.n() 
-            self._nx = 2 * self._n
-            self._nu = self._n
-        elif self._robot_config.base_type == 'diffdrive':
-            self._n = self._fk.n() + 3
-            self._nx = 2 * self._n + 2
-            self._nu = 2 + self._fk.n()
-        self._ns = 0
-        self._n_obst = 0
-        self._m_obst = 3
-        self._pairs = []
-        self._N = self._config.time_horizon
+
+        super().__init__(**kwargs)
+        self._kwargs = kwargs
+
         if initParamMap:
             self._limits = {
                 "x": {"low": np.ones(self._nx) * -100, "high": np.ones(self._nx) * 100},
@@ -88,7 +43,7 @@ class MpcModel(object):
         self._paramMap = {}
         self._npar = 0
         self.addEntry2ParamMap("wu", self._nu)
-        self.addEntry2ParamMap("wvel", self._n)
+        self.addEntry2ParamMap("wvel", self._nx-self._n)
         self.addEntry2ParamMap("w", self._m)
         if self._config.slack:
             self._ns = 1
@@ -99,8 +54,8 @@ class MpcModel(object):
         self.addEntry2ParamMap("upper_limits", self._n)
         self.addEntry2ParamMap("lower_limits_vel", 2)
         self.addEntry2ParamMap("upper_limits_vel", 2)
-        self.addEntry2ParamMap("lower_limits_u", 2)
-        self.addEntry2ParamMap("upper_limits_u", 2)
+        #self.addEntry2ParamMap("lower_limits_u", 2)
+        #self.addEntry2ParamMap("upper_limits_u", 2)
         self.setObstacles()
 
     def addEntry2ParamMap(self, name, n_par):
@@ -114,59 +69,14 @@ class MpcModel(object):
         self.addEntry2ParamMap("obst", 4 * self._config.number_obstacles)
         self.addEntry2ParamMap('wobst', 1)
 
-    def extractVariables(self, z):
-        q = z[0: self._n]
-        qdot = z[self._n: self._nx]
-        qddot = z[self._nx + self._ns : self._nx + self._ns + self._nu]
-        return q, qdot, qddot
 
-    def get_velocity(self, z):
-        return  z[self._n: self._nx]
 
-    def eval_objectiveCommon(self, z, p):
-        variables = self.extractVariables(z)
-        q = variables[0]
-        vel = self.get_velocity(z)
-        w = p[self._paramMap["w"]]
-        wvel = p[self._paramMap["wvel"]]
-        g = p[self._paramMap["g"]]
-        W = diagSX(w, self._m)
-        Wvel = diagSX(wvel, self._nu)
-        fk_ee = self._fk.fk(
-            q,
-            self._robot_config.root_link,
-            self._robot_config.end_link,
-            positionOnly=True
-        )
-        Jvel = ca.dot(vel, ca.mtimes(Wvel, vel))
-        err = fk_ee - g
-        Jx = ca.dot(err, ca.mtimes(W, err))
-        Jobst = 0
-        Js = 0
-        obstDistances = 1/ca.vcat(self.eval_obstacleDistances(z, p) )
-        wobst = ca.SX(np.ones(obstDistances.shape[0]) * p[self._paramMap['wobst']])
-        Wobst = diagSX(wobst, obstDistances.shape[0])
-        Jobst += ca.dot(obstDistances, ca.mtimes(Wobst, obstDistances))
-        if self._ns > 0:
-            s = z[self._nx]
-            ws = p[self._paramMap["ws"]]
-            Js += ws * s ** 2
-        return Jx, Jvel, Js, Jobst
 
-    def eval_objectiveN(self, z, p):
-        Jx, Jvel, Js, Jobst = self.eval_objectiveCommon(z, p)
-        return Jx + Jvel + Js + Jobst
 
-    def eval_objective(self, z, p):
-        wu = p[self._paramMap["wu"]]
-        Wu = diagSX(wu, self._nu)
-        Jx, Jvel, Js, Jobst = self.eval_objectiveCommon(z, p)
-        _, _, qddot, *_ = self.extractVariables(z)
-        Ju = ca.dot(qddot, ca.mtimes(Wu, qddot))
-        return Jx + Jvel + Js + Jobst + Ju
+
 
     def eval_inequalities(self, z, p):
-        all_ineqs = self.eval_obstacleDistances(z, p) + self.eval_jointLimits(z, p) + self.eval_selfCollision(z, p) #+ self.eval_speedLimits(z,p) + self.eval_InputLimits(z,p)
+        all_ineqs = self.eval_obstacleDistances(z, p) + self.eval_jointLimits(z, p) + self.eval_selfCollision(z, p) + self.eval_speedLimits(z,p) #+ self.eval_InputLimits(z,p)
         if self._ns > 0:
             s = z[self._nx]
             for ineq in all_ineqs:
@@ -262,10 +172,11 @@ class MpcModel(object):
         self._dt = dt
 
     def setModel(self):
+        self.objective = GoalMpcObjective(self._paramMap, **self._kwargs)
         self._model = forcespro.nlp.SymbolicModel(self._N)
         self._model.continuous_dynamics = self.continuous_dynamics
-        self._model.objective = self.eval_objective
-        self._model.objectiveN = self.eval_objectiveN
+        self._model.objective = self.objective.eval_objective
+        self._model.objectiveN = self.objective.eval_objectiveN
         E = np.concatenate(
             [np.eye(self._nx), np.zeros((self._nx, self._nu + self._ns))], axis=1
         )
@@ -291,7 +202,7 @@ class MpcModel(object):
         number_inequalities += self._config.number_obstacles * len(self._robot_config.collision_links)
         number_inequalities += len(self._robot_config.selfCollision['pairs'])
         number_inequalities += self._n * 2
-        # number_inequalities +=  2 *2
+        number_inequalities +=  2 *2
         # number_inequalities += 2 * 2
         self._model.nh = number_inequalities
         self._model.hu = np.ones(number_inequalities) * np.inf
