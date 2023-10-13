@@ -16,31 +16,38 @@ class GoalMpcObjective(MpcBase):
         variables = self.extractVariables(z)
         q = variables[0]
         vel = self.get_velocity(z)
+        goal = p[self._paramMap["g"]]
+
         w = p[self._paramMap["w"]]
         wvel = p[self._paramMap["wvel"]]
-        g = p[self._paramMap["g"]]
         W = diagSX(w, self._m)
         Wvel = diagSX(wvel, self._nx-self._n)
+
         fk_ee = self._fk.fk(
             q,
             self._robot_config.root_link,
             self._robot_config.end_link,
             positionOnly=True
         )
+
         Jvel = ca.dot(vel, ca.mtimes(Wvel, vel))
-        err = fk_ee - g
-        Jx = ca.dot(err, ca.mtimes(W, err))
+
+        err = fk_ee - goal
+        Jgoal = ca.dot(err, ca.mtimes(W, err))
+
         Jobst = 0
-        Js = 0
         obstDistances = 1/ca.vcat(self.eval_obstacleDistances(z, p))
         wobst = ca.SX(np.ones(obstDistances.shape[0]) * p[self._paramMap['wobst']])
         Wobst = diagSX(wobst, obstDistances.shape[0])
         Jobst += ca.dot(obstDistances, ca.mtimes(Wobst, obstDistances))
+
+        Js = 0
         if self._ns > 0:
             s = z[self._nx]
             ws = p[self._paramMap["ws"]]
             Js += ws * s ** 2
-        return Jx, Jvel, Js, Jobst
+
+        return Jgoal, Jvel, Js, Jobst
 
     def eval_objectiveN(self, z, p):
         Jx, Jvel, Js, Jobst = self.eval_objectiveCommon(z, p)

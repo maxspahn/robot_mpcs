@@ -16,7 +16,7 @@ from shutil import move, rmtree
 from glob import glob
 from robotmpcs.models.mpcBase import MpcBase
 from robotmpcs.models.objectives.goal_mpc_objective import GoalMpcObjective
-
+from robotmpcs.models.inequalities.InequalityManager import InequalityManager
 
 
 
@@ -38,6 +38,11 @@ class MpcModel(MpcBase):
                 "s": {"low": np.zeros(1), "high": np.ones(1) * np.inf},
             }
             self.initParamMap()
+        inequality_list = ['obstacle_avoidance', 'speed_limits', 'joint_limits', 'input_limits', 'self_collision']
+        self._inequality_manager = InequalityManager(self._paramMap, inequality_list , **kwargs)
+        self._inequality_manager.set_constraints()
+
+
 
     def initParamMap(self):
         self._paramMap = {}
@@ -58,9 +63,7 @@ class MpcModel(MpcBase):
         self.addEntry2ParamMap("upper_limits_u", 2)
         self.setObstacles()
 
-    def addEntry2ParamMap(self, name, n_par):
-        self._paramMap[name] = list(range(self._npar, self._npar + n_par))
-        self._npar += n_par
+
 
     def setSelfCollisionAvoidance(self, pairs):
         self._pairs = pairs
@@ -75,13 +78,7 @@ class MpcModel(MpcBase):
 
 
 
-    def eval_inequalities(self, z, p):
-        all_ineqs = self.eval_obstacleDistances(z, p) + self.eval_jointLimits(z, p) + self.eval_selfCollision(z, p) + self.eval_speedLimits(z,p) + self.eval_InputLimits(z,p)
-        if self._ns > 0:
-            s = z[self._nx]
-            for ineq in all_ineqs:
-                ineq  += s
-        return all_ineqs
+
 
 
 
@@ -96,45 +93,10 @@ class MpcModel(MpcBase):
             ineqs.append(dist - (2 * r_body))
         return ineqs
 
-    def eval_speedLimits(self, z, p):
-        # Parameters in state boundaries?
-        q, qdot, _ = self.extractVariables(z)
-        vel = qdot[-2:]
-        lower_limits = p[self._paramMap["lower_limits_vel"]]
-        upper_limits = p[self._paramMap["upper_limits_vel"]]
-        ineqs = []
-        for j in range(2):
-            dist_lower = vel[j] - lower_limits[j]
-            dist_upper = upper_limits[j] - vel[j]
-            ineqs.append(dist_lower)
-            ineqs.append(dist_upper)
-        return ineqs
 
-    def eval_jointLimits(self, z, p):
-        # Parameters in state boundaries?
-        q, *_ = self.extractVariables(z)
-        lower_limits = p[self._paramMap["lower_limits"]]
-        upper_limits = p[self._paramMap["upper_limits"]]
-        ineqs = []
-        for j in range(self._n):
-            dist_lower = q[j] - lower_limits[j]
-            dist_upper = upper_limits[j] - q[j]
-            ineqs.append(dist_lower)
-            ineqs.append(dist_upper)
-        return ineqs
 
-    def eval_InputLimits(self, z, p):
-        # Parameters in state boundaries?
-        u = z[-self._nu:]
-        lower_limits = p[self._paramMap["lower_limits_u"]]
-        upper_limits = p[self._paramMap["upper_limits_u"]]
-        ineqs = []
-        for j in range(2):
-            dist_lower = u[j] - lower_limits[j]
-            dist_upper = upper_limits[j] - u[j]
-            ineqs.append(dist_lower)
-            ineqs.append(dist_upper)
-        return ineqs
+
+
 
     def setLimits(self, limits):
         self._limits = limits
@@ -184,7 +146,7 @@ class MpcModel(MpcBase):
         self._model.nh = number_inequalities
         self._model.hu = np.ones(number_inequalities) * np.inf
         self._model.hl = np.zeros(number_inequalities)
-        self._model.ineq = self.eval_inequalities
+        self._model.ineq = self._inequality_manager.eval_inequalities
         self._model.xinitidx = range(0, self._nx)
 
     def setCodeoptions(self, **kwargs):

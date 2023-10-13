@@ -97,8 +97,17 @@ class BoxerMpcExample(MpcExample):
             for key in output:
                 plan.append(np.concatenate([output[key][:2],np.zeros(1)]))
             ob, *_ = self._env.step(action)
-
+            if self.check_goal_reaching(ob):
+                print("goal reached")
+                break
             self._env.update_visualizations(plan)
+
+    def check_goal_reaching(self, ob):
+        goal_dist = np.linalg.norm(ob['robot_0']['joint_state']['position'][:2] - self._goal._config.subgoal0.desired_position) # todo remove hard coded dimension
+        if goal_dist<=self._goal._config.subgoal0.epsilon:
+            return True
+        else:
+            return False
 
 def main():
     boxer_example = BoxerMpcExample(sys.argv[1])
