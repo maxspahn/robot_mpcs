@@ -14,6 +14,7 @@ from robotmpcs.models.mpcBase import MpcConfiguration
 from robotmpcs.models.mpcModel import MpcModel
 
 
+
 from robotmpcs.models.diff_drive_mpc_model import MpcDiffDriveModel
 
 
@@ -45,7 +46,7 @@ class MPCPlanner(object):
     def __init__(self, robotType, solversDir, **kwargs):
         self._config = MpcConfiguration(**kwargs)
         self._robotType = robotType
-
+        self._initial_step = True
 
         #self._visualizer.add_visualization()
         """
@@ -88,10 +89,13 @@ class MPCPlanner(object):
             print("FAILED TO LOAD SOLVER")
             raise e
 
+
+
     def reset(self):
         print("RESETTING PLANNER")
         self._x0 = np.zeros(shape=(self._config.time_horizon, self._nx + self._nu + self._ns))
         self._xinit = np.zeros(self._nx)
+        self._initial_step = True
         if self._config.slack:
             self._slack = 0.0
         #self._x0[-1, -1] = 0.1 # todo why?
@@ -203,7 +207,7 @@ class MPCPlanner(object):
     def concretize(self):
         pass
 
-    def shiftHorizon(self, output, ob):
+    def shiftHorizon(self, output):
         for key in output.keys():
             if self._config.time_horizon < 10:
                 stage = int(key[-1:])
@@ -214,10 +218,18 @@ class MPCPlanner(object):
             if stage == 1:
                 continue
             self._x0[stage - 2, 0 : len(output[key])] = output[key]
+            self._x0[-1:, 0 : len(output[key])] = output[key]
 
-    def setX0(self, xinit):
-        for i in range(self._config.time_horizon):
-            self._x0[i][0 : self._nx] = xinit
+    def setX0(self, initialize_type="current_state", initial_step= True):
+        if initialize_type == "current_state" or initialize_type == "previous_plan" and initial_step:
+            for i in range(self._config.time_horizon):
+                self._x0[i][0 : self._nx] = self._xinit
+                self._initial_step = False
+        elif initialize_type == "previous_plan":
+            self.shiftHorizon(self.output)
+        else:
+            np.zeros(shape=(self._config.time_horizon, self._nx + self._nu + self._ns))
+
 
     def solve(self, ob):
         # print("Observation : " , ob[0:self._nx])
@@ -227,8 +239,7 @@ class MPCPlanner(object):
         action = np.zeros(self._nu)
         problem = {}
         problem["xinit"] = self._xinit
-        self._x0[0][0 : self._nx] = self._xinit
-        self.setX0(self._xinit)
+        self.setX0(initialize_type="previous_plan", initial_step=self._initial_step)
         problem["x0"] = self._x0.flatten()[:]
         problem["all_parameters"] = self._params
         # debug
@@ -258,7 +269,7 @@ class MPCPlanner(object):
             #print("J : ", J)
             #print('z : ', z)
             #print('xinit : ', self._xinit)
-        output, exitflag, info = self._solver.solve(problem)
+        self.output, exitflag, info = self._solver.solve(problem)
         if exitflag < 0:
             print(exitflag)
         if self._config.time_horizon < 10:
@@ -272,20 +283,20 @@ class MPCPlanner(object):
             key1 = 'x002'
         # If in velocity mode, the action should be velocities instead of accelerations
         if self._config.control_mode == "vel":
-            action = output[key1][-self._nu-self._nu: -self._nu]
+            action = self.output[key1][-self._nu-self._nu: -self._nu]
         elif self._config.control_mode == "acc":
-            action = output[key0][-self._nu:]
+            action = self.output[key0][-self._nu:]
         else:
             print("No valid control mode specified!")
             action = np.zeros((self._nu))
         if self._config.slack:
-            self._slack = output[key1][self._nx]
+            self._slack = self.output[key1][self._nx]
             if self._slack > 1e-3:
                 print("slack : ", self._slack)
         # print('action : ', action)
         # print("prediction : ", output["x02"][0:self._nx])
-        self.shiftHorizon(output, ob)
-        return action, output, info
+
+        return action, self.output, info
 
     def concretize(self):
         self._actionCounter = self._config.interval

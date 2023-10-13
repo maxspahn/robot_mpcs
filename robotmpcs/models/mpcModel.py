@@ -54,8 +54,8 @@ class MpcModel(MpcBase):
         self.addEntry2ParamMap("upper_limits", self._n)
         self.addEntry2ParamMap("lower_limits_vel", 2)
         self.addEntry2ParamMap("upper_limits_vel", 2)
-        #self.addEntry2ParamMap("lower_limits_u", 2)
-        #self.addEntry2ParamMap("upper_limits_u", 2)
+        self.addEntry2ParamMap("lower_limits_u", 2)
+        self.addEntry2ParamMap("upper_limits_u", 2)
         self.setObstacles()
 
     def addEntry2ParamMap(self, name, n_par):
@@ -76,37 +76,14 @@ class MpcModel(MpcBase):
 
 
     def eval_inequalities(self, z, p):
-        all_ineqs = self.eval_obstacleDistances(z, p) + self.eval_jointLimits(z, p) + self.eval_selfCollision(z, p) + self.eval_speedLimits(z,p) #+ self.eval_InputLimits(z,p)
+        all_ineqs = self.eval_obstacleDistances(z, p) + self.eval_jointLimits(z, p) + self.eval_selfCollision(z, p) + self.eval_speedLimits(z,p) + self.eval_InputLimits(z,p)
         if self._ns > 0:
             s = z[self._nx]
             for ineq in all_ineqs:
                 ineq  += s
         return all_ineqs
 
-    def eval_obstacleDistances(self, z, p):
-        ineqs = []
-        q, *_ = self.extractVariables(z)
-        if self._ns > 0:
-            s = z[self._nx]
-        else:
-            s = 0.0
-        if "obst" in self._paramMap.keys():
-            obsts = p[self._paramMap["obst"]]
-            r_body = p[self._paramMap["r_body"]]
-            for j, collision_link in enumerate(self._robot_config.collision_links):
-                fk = self._fk.fk(
-                    q,
-                    self._robot_config.root_link,
-                    collision_link,
-                    positionOnly=True
-                )[0:self._m]
-                for i in range(self._config.number_obstacles):
-                    obst = obsts[i * (self._m_obst + 1) : (i + 1) * (self._m_obst + 1)]
-                    x = obst[0 : self._m_obst]
-                    r = obst[self._m_obst]
-                    dist = ca.norm_2(fk - x)
-                    ineqs.append(dist - r - r_body)
-        return ineqs
+
 
     def eval_selfCollision(self, z, p):
         q, *_ = self.extractVariables(z)
@@ -203,7 +180,7 @@ class MpcModel(MpcBase):
         number_inequalities += len(self._robot_config.selfCollision['pairs'])
         number_inequalities += self._n * 2
         number_inequalities +=  2 *2
-        # number_inequalities += 2 * 2
+        number_inequalities += 2 * 2
         self._model.nh = number_inequalities
         self._model.hu = np.ones(number_inequalities) * np.inf
         self._model.hl = np.zeros(number_inequalities)

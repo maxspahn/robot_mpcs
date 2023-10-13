@@ -32,10 +32,10 @@ class GoalMpcObjective(MpcBase):
         Jx = ca.dot(err, ca.mtimes(W, err))
         Jobst = 0
         Js = 0
-        #obstDistances = 1/ca.vcat(self.eval_obstacleDistances(z, p) )
-        #wobst = ca.SX(np.ones(obstDistances.shape[0]) * p[self._paramMap['wobst']])
-        #Wobst = diagSX(wobst, obstDistances.shape[0])
-        #Jobst += ca.dot(obstDistances, ca.mtimes(Wobst, obstDistances))
+        obstDistances = 1/ca.vcat(self.eval_obstacleDistances(z, p))
+        wobst = ca.SX(np.ones(obstDistances.shape[0]) * p[self._paramMap['wobst']])
+        Wobst = diagSX(wobst, obstDistances.shape[0])
+        Jobst += ca.dot(obstDistances, ca.mtimes(Wobst, obstDistances))
         if self._ns > 0:
             s = z[self._nx]
             ws = p[self._paramMap["ws"]]

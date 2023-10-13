@@ -1,3 +1,4 @@
+import casadi as ca
 from dataclasses import dataclass
 from forwardkinematics.fksCommon.fk import ForwardKinematics
 from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
@@ -61,3 +62,28 @@ class MpcBase(object):
         qdot = z[self._n: self._nx]
         qddot = z[self._nx + self._ns : self._nx + self._ns + self._nu]
         return q, qdot, qddot
+
+    def eval_obstacleDistances(self, z, p):
+        ineqs = []
+        q, *_ = self.extractVariables(z)
+        if self._ns > 0:
+            s = z[self._nx]
+        else:
+            s = 0.0
+        if "obst" in self._paramMap.keys():
+            obsts = p[self._paramMap["obst"]]
+            r_body = p[self._paramMap["r_body"]]
+            for j, collision_link in enumerate(self._robot_config.collision_links):
+                fk = self._fk.fk(
+                    q,
+                    self._robot_config.root_link,
+                    collision_link,
+                    positionOnly=True
+                )[0:self._m]
+                for i in range(self._config.number_obstacles):
+                    obst = obsts[i * (self._m_obst + 1) : (i + 1) * (self._m_obst + 1)]
+                    x = obst[0 : self._m_obst]
+                    r = obst[self._m_obst]
+                    dist = ca.norm_2(fk - x)
+                    ineqs.append(dist - r - r_body)
+        return ineqs

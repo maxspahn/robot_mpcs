@@ -39,13 +39,13 @@ class BoxerMpcExample(MpcExample):
                 [-10, 10],
                 [-10, 10],
         ])
-        self._limits_vel = np.array([
-                [0.7*(-4), 0.7*4],
-                [0.5*(-10), 0.5*10],
+        self._limits_vel = np.array([ #todo add to config
+                [(-4), 4],
+                [(-10), 10],
         ])
         self._limits_u = np.array([
-                [-np.inf, np.inf],
-                [-np.inf, np.inf],
+                [-10, 10],
+                [-10, 10],
         ])
         current_path = os.path.dirname(os.path.abspath(__file__))
         robots = [
@@ -97,6 +97,7 @@ class BoxerMpcExample(MpcExample):
             for key in output:
                 plan.append(np.concatenate([output[key][:2],np.zeros(1)]))
             ob, *_ = self._env.step(action)
+
             self._env.update_visualizations(plan)
 
 def main():

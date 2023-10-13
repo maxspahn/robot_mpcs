@@ -8,7 +8,7 @@ mpc:
   interval: 1
   weights:
     w: 1.0
-    wvel: [0.0, 0.0, 0.0, 0.01, 0.01]
+    wvel: [0.0, 0.0, 0.0, 1, 0.01]
     ws: 1e10
     wu: 0.01
     wobst: 0.5
@@ -19,7 +19,7 @@ robot:
     - ee_link
   selfCollision:
     pairs:  []
-  urdf_file: boxer.urdf
+  urdf_file: boxer_fk.urdf
   root_link: base_link
   end_link: ee_link
   base_type: diffdrive

@@ -40,5 +40,5 @@ class MpcExample(object):
         self._planner.setGoal(self._goal)
         self._planner.setJointLimits(np.transpose(self._limits))
         self._planner.setSpeedLimits(np.transpose(self._limits_vel))
-        # self._planner.setInputLimits(np.transpose(self._limits_u))
+        self._planner.setInputLimits(np.transpose(self._limits_u))
 
