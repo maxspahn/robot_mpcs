@@ -18,7 +18,7 @@ class BoxerMpcExample(MpcExample):
             'indices': [0, 1],
             'parent_link': 0,
             'child_link': self._n,
-            'desired_position': [2, -2],
+            'desired_position': [10, -0.1],
             'epsilon': 0.2,
             'type': "staticSubGoal", 
         }
