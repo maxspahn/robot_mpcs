@@ -12,7 +12,7 @@ class PointRobotMpcExample(MpcExample):
 
     def initialize_environment(self):
         robots = [
-            GenericUrdfReacher(urdf="assets/po1ntRobot/pointRobot.urdf", mode="acc"),
+            GenericUrdfReacher(urdf="pointRobot.urdf", mode="acc"),
         ]
         self._env = gym.make(
             "urdf-env-v0",

@@ -56,7 +56,7 @@ class PointRobotMpcExample(MpcExample):
         current_path = os.path.dirname(os.path.abspath(__file__))
         robots = [
             GenericUrdfReacher(
-                urdf=current_path + "/assets/po1ntRobot/pointRobot.urdf",
+                urdf=current_path + "pointRobot.urdf",
                 mode="acc",
             )
         ]

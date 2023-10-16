@@ -50,7 +50,7 @@ class BoxerMpcExample(MpcExample):
         current_path = os.path.dirname(os.path.abspath(__file__))
         robots = [
             GenericDiffDriveRobot(
-                urdf=current_path + "/assets/boxer/boxer.urdf",
+                urdf='boxer.urdf',
                 mode='acc', #todo add to config
                 actuated_wheels=["wheel_right_joint", "wheel_left_joint"],
                 castor_wheels=["rotacastor_right_joint", "rotacastor_left_joint"],

@@ -18,7 +18,7 @@ class PandaMpcExample(MpcExample):
     def initialize_environment(self):
         current_path = os.path.dirname(os.path.abspath(__file__))
         robots = [
-            GenericUrdfReacher(urdf="assets/panda/panda.urdf", mode="acc"),
+            GenericUrdfReacher(urdf="panda.urdf", mode="acc"),
         ]
         self._env = gym.make(
             "urdf-env-v0",
