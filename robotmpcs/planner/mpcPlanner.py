@@ -178,7 +178,7 @@ class MPCPlanner(object):
 
     def setSpeedLimits(self, limits_vel):
         for i in range(self._config.time_horizon):
-            for j in range(2):
+            for j in range(2): # todo make dependent on vel dim
                 self._params[
                     self._npar * i + self._paramMap["lower_limits_vel"][j]
                 ] = limits_vel[0][j]
@@ -188,7 +188,7 @@ class MPCPlanner(object):
 
     def setInputLimits(self, limits_u):
         for i in range(self._config.time_horizon):
-            for j in range(2):
+            for j in range(self._nu):
                 self._params[
                     self._npar * i + self._paramMap["lower_limits_u"][j]
                 ] = limits_u[0][j]

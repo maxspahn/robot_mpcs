@@ -30,6 +30,11 @@ class PointRobotMpcExample(MpcExample):
                 [-10, 10],
                 [-10, 10],
         ])
+        self._limits_u = np.array([
+                [-1, 1],
+                [-1, 1],
+                [-15, 15],
+        ])
         # Definition of the obstacle.
         static_obst_dict = {
             "type": "sphere",
@@ -68,7 +73,7 @@ class PointRobotMpcExample(MpcExample):
         for i in range(n_steps):
             q = ob["robot_0"]['joint_state']['position']
             qdot = ob["robot_0"]['joint_state']['velocity']
-            action = self._planner.computeAction(q, qdot)
+            action, output = self._planner.computeAction(q, qdot)
             ob, *_ = self._env.step(action)
 
 def main():
@@ -78,7 +83,6 @@ def main():
     point_robot_example.run()
 
 if __name__ == "__main__":
-    sys.argv.append('config/po1ntRobotMpc.yaml')
     if len(sys.argv) < 2:
         print("Please provide a config file for solver generation.")
     else:
