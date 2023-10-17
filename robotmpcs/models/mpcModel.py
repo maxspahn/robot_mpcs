@@ -4,9 +4,6 @@ from dataclasses import dataclass
 from forwardkinematics.fksCommon.fk import ForwardKinematics
 from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
 import numpy as np
-import sys
-sys.path.append("../")
-sys.path.append("")
 from examples.helpers import load_forces_path
 from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
 load_forces_path()
@@ -17,13 +14,6 @@ from glob import glob
 from robotmpcs.models.mpcBase import MpcBase
 from robotmpcs.models.objectives.goal_mpc_objective import GoalMpcObjective
 from robotmpcs.models.inequalities.InequalityManager import InequalityManager
-
-
-
-
-
-
-
 
 class MpcModel(MpcBase):
     def __init__(self, initParamMap=True, **kwargs):
@@ -41,7 +31,6 @@ class MpcModel(MpcBase):
         inequality_list = ['obstacle_avoidance', 'speed_limits', 'joint_limits', 'input_limits', 'self_collision']
         self._inequality_manager = InequalityManager(self._paramMap, inequality_list , **kwargs)
         self._inequality_manager.set_constraints()
-
 
 
     def initParamMap(self):
@@ -63,23 +52,12 @@ class MpcModel(MpcBase):
         self.addEntry2ParamMap("upper_limits_u", self._nu) #todo move them to corresponding ineq class
         self.setObstacles()
 
-
-
     def setSelfCollisionAvoidance(self, pairs):
         self._pairs = pairs
 
     def setObstacles(self):
         self.addEntry2ParamMap("obst", 4 * self._config.number_obstacles)
         self.addEntry2ParamMap('wobst', 1)
-
-
-
-
-
-
-
-
-
 
 
     def eval_selfCollision(self, z, p):
@@ -92,11 +70,6 @@ class MpcModel(MpcBase):
             dist = ca.norm_2(fk1 - fk2)
             ineqs.append(dist - (2 * r_body))
         return ineqs
-
-
-
-
-
 
     def setLimits(self, limits):
         self._limits = limits

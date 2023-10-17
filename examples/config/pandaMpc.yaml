@@ -6,6 +6,7 @@ mpc:
   time_step: 0.05
   slack: False
   interval: 1
+  initialization: "current_state"
   constraints: ['RadialConstraints',
                 'SelfCollisionAvoidanceConstraints',
                 'JointLimitConstraints',
@@ -17,7 +18,7 @@ mpc:
     wu: 0.1
     wobst: 0.01
   number_obstacles: 1
-  initialization: "current_state"
+
   control_mode: "acc"
 robot:
   collision_links: 
