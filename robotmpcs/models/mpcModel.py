@@ -28,8 +28,7 @@ class MpcModel(MpcBase):
                 "s": {"low": np.zeros(1), "high": np.ones(1) * np.inf},
             }
             self.initParamMap()
-        inequality_list = ['obstacle_avoidance', 'speed_limits', 'joint_limits', 'input_limits', 'self_collision']
-        self._inequality_manager = InequalityManager(self._paramMap, inequality_list , **kwargs)
+        self._inequality_manager = InequalityManager(self._paramMap, **kwargs)
         self._inequality_manager.set_constraints()
 
 

@@ -1,15 +1,7 @@
 import numpy as np
 import yaml
 import os
-import sys
-sys.path.append("../")
-sys.path.append("")
-from examples.helpers import load_forces_path
-from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
-load_forces_path()
 import forcespro
-import re
-import robotmpcs
 from robotmpcs.models.mpcBase import MpcConfiguration
 from robotmpcs.models.mpcModel import MpcModel
 
@@ -176,7 +168,7 @@ class MPCPlanner(object):
                     self._npar * i + self._paramMap["upper_limits"][j]
                 ] = limits[1][j]
 
-    def setSpeedLimits(self, limits_vel):
+    def setVelLimits(self, limits_vel):
         for i in range(self._config.time_horizon):
             for j in range(2): # todo make dependent on vel dim
                 self._params[
@@ -290,11 +282,10 @@ class MPCPlanner(object):
             print("No valid control mode specified!")
             action = np.zeros((self._nu))
         if self._config.slack:
-            self._slack = self.output[key1][self._nx]
+            self._slack = self.output[key0][self._nx]
             if self._slack > 1e-3:
                 print("slack : ", self._slack)
-        # print('action : ', action)
-        # print("prediction : ", output["x02"][0:self._nx])
+
 
         return action, self.output, info
 

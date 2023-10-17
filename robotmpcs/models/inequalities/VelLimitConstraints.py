@@ -1,6 +1,6 @@
 import casadi as ca
 from robotmpcs.models.mpcBase import MpcBase
-class SpeedLimitConstraints(MpcBase):
+class VelLimitConstraints(MpcBase):
 
     def __init__(self, ParamMap={}, **kwargs):
         super().__init__(**kwargs)
