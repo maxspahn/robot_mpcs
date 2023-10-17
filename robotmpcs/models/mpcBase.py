@@ -10,8 +10,10 @@ class MpcConfiguration:
     weights: dict
     slack: bool
     interval: int
+    constraints: list
     number_obstacles: int
     model_name: str
+    initialization: str
     n: int
     control_mode: str
     name: str = 'mpc'

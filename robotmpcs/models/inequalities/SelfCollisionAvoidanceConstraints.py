@@ -7,6 +7,9 @@ class SelfCollisionAvoidanceConstraints(MpcBase):
 
         self._paramMap = ParamMap
 
+    def get_number_ineq(self):
+        return len(self._robot_config.selfCollision['pairs'])
+
     def eval_constraint(self, z, p):
         q, *_ = self.extractVariables(z)
         r_body = p[self._paramMap["r_body"]]

@@ -2,10 +2,6 @@ import sys
 import os
 import numpy as np
 import gymnasium as gym
-# import urdfenvs.panda_reacher
-# from MotionPlanningEnv.sphereObstacle import SphereObstacle
-# from MotionPlanningGoal.staticSubGoal import StaticSubGoal
-from urdfenvs.urdf_common.urdf_env import UrdfEnv
 from urdfenvs.robots.generic_urdf import GenericUrdfReacher
 from urdfenvs.sensors.full_sensor import FullSensor
 from mpscenes.goals.goal_composition import GoalComposition
@@ -71,6 +67,16 @@ class PandaMpcExample(MpcExample):
                 [-2.8973, 2.8973]
         ])
 
+        self._limits_u = np.array([
+                [-1, 1],
+                [-1, 1],
+                [-15, 15],
+                [-15, 15],
+                [-7.5, 7.5],
+                [-10, 10],
+                [-12.5, 12.5],
+        ])
+
         self._goal = GoalComposition(name="goal", content_dict=goal_dict)
         pos0 = np.median(self._limits, axis = 1)
         # vel0 = np.array([0.1, 0.0, 0.0])
@@ -88,7 +94,7 @@ class PandaMpcExample(MpcExample):
         for i in range(n_steps):
             q = ob["robot_0"]['joint_state']['position']
             qdot = ob["robot_0"]['joint_state']['velocity']
-            action = self._planner.computeAction(q, qdot)
+            action, output = self._planner.computeAction(q, qdot)
             ob, *_ = self._env.step(action)
 
 def main():

@@ -7,6 +7,9 @@ class JointLimitConstraints(MpcBase):
 
         self._paramMap = ParamMap
 
+    def get_number_ineq(self):
+        return self._n*2
+
     def eval_constraint(self, z, p):
         # Parameters in state boundaries?
         q, *_ = self.extractVariables(z)

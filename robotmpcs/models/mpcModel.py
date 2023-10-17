@@ -59,8 +59,8 @@ class MpcModel(MpcBase):
         self.addEntry2ParamMap("upper_limits", self._n)
         self.addEntry2ParamMap("lower_limits_vel", 2)
         self.addEntry2ParamMap("upper_limits_vel", 2)
-        self.addEntry2ParamMap("lower_limits_u", 2)
-        self.addEntry2ParamMap("upper_limits_u", 2)
+        self.addEntry2ParamMap("lower_limits_u", self._nu)
+        self.addEntry2ParamMap("upper_limits_u", self._nu) #todo move them to corresponding ineq class
         self.setObstacles()
 
 
@@ -138,11 +138,8 @@ class MpcModel(MpcBase):
         self._model.nvar = self._nx + self._nu + self._ns
         self._model.neq = self._nx
         number_inequalities = 0
-        number_inequalities += self._config.number_obstacles * len(self._robot_config.collision_links)
-        number_inequalities += len(self._robot_config.selfCollision['pairs'])
-        number_inequalities += self._n * 2
-        number_inequalities +=  2 *2
-        number_inequalities += 2 * 2
+        for ineq_module in self._inequality_manager.inequality_modules:
+            number_inequalities += ineq_module.get_number_ineq()
         self._model.nh = number_inequalities
         self._model.hu = np.ones(number_inequalities) * np.inf
         self._model.hl = np.zeros(number_inequalities)

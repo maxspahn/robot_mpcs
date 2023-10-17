@@ -38,7 +38,10 @@ class MpcExample(object):
         self._r_body = 0.6
         self._planner.setObstacles(self._obstacles, self._r_body)
         self._planner.setGoal(self._goal)
-        self._planner.setJointLimits(np.transpose(self._limits))
-        self._planner.setSpeedLimits(np.transpose(self._limits_vel))
-        self._planner.setInputLimits(np.transpose(self._limits_u))
+        if hasattr(self, '_limits'):
+            self._planner.setJointLimits(np.transpose(self._limits))
+        if hasattr(self, '_limits_vel'):
+            self._planner.setSpeedLimits(np.transpose(self._limits_vel))
+        if hasattr(self, '_limits_u'):
+            self._planner.setInputLimits(np.transpose(self._limits_u))
 

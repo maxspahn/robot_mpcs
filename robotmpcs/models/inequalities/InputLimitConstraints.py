@@ -6,6 +6,8 @@ class InputLimitConstraints(MpcBase):
 
         self._paramMap = ParamMap
 
+    def get_number_ineq(self):
+        return self._nu * 2
 
     def eval_constraint(self, z, p):
         # Parameters in state boundaries?
@@ -13,7 +15,7 @@ class InputLimitConstraints(MpcBase):
         lower_limits = p[self._paramMap["lower_limits_u"]]
         upper_limits = p[self._paramMap["upper_limits_u"]]
         ineqs = []
-        for j in range(2):
+        for j in range(self._nu):
             dist_lower = u[j] - lower_limits[j]
             dist_upper = upper_limits[j] - u[j]
             ineqs.append(dist_lower)

@@ -239,7 +239,7 @@ class MPCPlanner(object):
         action = np.zeros(self._nu)
         problem = {}
         problem["xinit"] = self._xinit
-        self.setX0(initialize_type="previous_plan", initial_step=self._initial_step)
+        self.setX0(initialize_type=self._config.initialization, initial_step=self._initial_step)
         problem["x0"] = self._x0.flatten()[:]
         problem["all_parameters"] = self._params
         # debug

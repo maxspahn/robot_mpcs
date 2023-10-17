@@ -1,9 +1,10 @@
+import importlib
 from robotmpcs.models.mpcBase import MpcBase
 from robotmpcs.models.inequalities.SelfCollisionAvoidanceConstraints import SelfCollisionAvoidanceConstraints
 from robotmpcs.models.inequalities.JointLimitConstraints import JointLimitConstraints
 from robotmpcs.models.inequalities.SpeedLimitConstraints import SpeedLimitConstraints
 from robotmpcs.models.inequalities.InputLimitConstraints import InputLimitConstraints
-from robotmpcs.models.inequalities.RadialConstraint import RadialConstraints
+from robotmpcs.models.inequalities.RadialConstraints import RadialConstraints
 class InequalityManager(MpcBase):
 
     def __init__(self, ParamMap={}, inequality_list = [], **kwargs):
@@ -15,11 +16,13 @@ class InequalityManager(MpcBase):
 
     def set_constraints(self):
         # update paramMap
-        self.inequality_modules = [RadialConstraints(self._paramMap, **self._kwargs),
-                                   SelfCollisionAvoidanceConstraints(self._paramMap, **self._kwargs),
-                                   JointLimitConstraints(self._paramMap, **self._kwargs),
-                                   SpeedLimitConstraints(self._paramMap, **self._kwargs),
-                                   InputLimitConstraints(self._paramMap, **self._kwargs)]
+        module = __import__('robotmpcs')
+        self.inequality_modules = []
+        for class_name in self._kwargs['mpc']['constraints']:
+            constraint_module_ = getattr(module.models.inequalities, class_name)
+            class_ = getattr(constraint_module_, class_name)
+            self.inequality_modules.append(class_(self._paramMap, **self._kwargs))
+
 
 
 
