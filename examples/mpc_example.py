@@ -41,7 +41,7 @@ class MpcExample(object):
         if hasattr(self, '_limits'):
             self._planner.setJointLimits(np.transpose(self._limits))
         if hasattr(self, '_limits_vel'):
-            self._planner.setSpeedLimits(np.transpose(self._limits_vel))
+            self._planner.setVelLimits(np.transpose(self._limits_vel))
         if hasattr(self, '_limits_u'):
             self._planner.setInputLimits(np.transpose(self._limits_u))
 
