@@ -14,6 +14,18 @@ class BoxerMpcExample(MpcExample):
     def initialize_environment(self):
         self._visualizer = Visualizer()
 
+        robots = [
+            GenericDiffDriveRobot(
+                urdf='boxer.urdf',
+                mode=self._config['mpc']['control_mode'],
+                actuated_wheels=["wheel_right_joint", "wheel_left_joint"],
+                castor_wheels=["rotacastor_right_joint", "rotacastor_left_joint"],
+                wheel_radius=0.08,
+                wheel_distance=0.494,
+                spawn_rotation=np.pi / 2,
+            ),
+        ]
+
         goal_dict = {
             "subgoal0": {
                 "weight": 1.0,
@@ -48,25 +60,15 @@ class BoxerMpcExample(MpcExample):
                 [-10, 10],
         ])
         current_path = os.path.dirname(os.path.abspath(__file__))
-        robots = [
-            GenericDiffDriveRobot(
-                urdf='boxer.urdf',
-                mode='acc', #todo add to config
-                actuated_wheels=["wheel_right_joint", "wheel_left_joint"],
-                castor_wheels=["rotacastor_right_joint", "rotacastor_left_joint"],
-                wheel_radius=0.08,
-                wheel_distance=0.494,
-                spawn_rotation=np.pi / 2,
-            ),
-        ]
+
         self._env = gym.make(
             'urdf-env-v0',
             render=self._render,
             robots=robots,
             dt=self._planner._config.time_step
         )
-        for i in range(10):
-            self._env.add_visualization(size=[0.6, 0.1]) #todo add r used for mpc
+        for i in range(self._config['mpc']['time_horizon']):
+            self._env.add_visualization(size=[self._r_body, 0.1])
 
     def run(self):
         q0 = np.median(self._limits, axis = 1)

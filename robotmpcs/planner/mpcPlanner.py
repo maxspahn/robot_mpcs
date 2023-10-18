@@ -3,11 +3,7 @@ import yaml
 import os
 import forcespro
 from robotmpcs.models.mpcBase import MpcConfiguration
-from robotmpcs.models.mpcModel import MpcModel
 
-
-
-from robotmpcs.models.diff_drive_mpc_model import MpcDiffDriveModel
 
 
 class SolverDoesNotExistError(Exception):
@@ -30,9 +26,6 @@ class EmptyObstacle():
 
 class PlannerSettingIncomplete(Exception):
     pass
-
-
-
 
 class MPCPlanner(object):
     def __init__(self, robotType, solversDir, **kwargs):

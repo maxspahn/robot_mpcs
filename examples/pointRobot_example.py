@@ -7,13 +7,17 @@ from urdfenvs.robots.generic_urdf import GenericUrdfReacher
 from mpscenes.obstacles.sphere_obstacle import SphereObstacle
 from mpscenes.goals.goal_composition import GoalComposition
 from mpc_example import MpcExample
+from robotmpcs.planner.visualizer import Visualizer
 
 class PointRobotMpcExample(MpcExample):
 
     def initialize_environment(self):
+        self._visualizer = Visualizer()
+
         robots = [
-            GenericUrdfReacher(urdf="pointRobot.urdf", mode="acc"),
+            GenericUrdfReacher(urdf="pointRobot.urdf", mode=self._config['mpc']['control_mode']),
         ]
+
         self._env = gym.make(
             "urdf-env-v0",
             dt=0.01, robots=robots, render=True
@@ -64,6 +68,10 @@ class PointRobotMpcExample(MpcExample):
         for obstacle in self._obstacles:
             self._env.add_obstacle(obstacle)
         self._env.set_spaces()
+
+        for i in range(self._config['mpc']['time_horizon']):
+            self._env.add_visualization(size=[self._r_body, 0.1])
+
         return {}
 
     def run(self):
@@ -74,7 +82,11 @@ class PointRobotMpcExample(MpcExample):
             q = ob["robot_0"]['joint_state']['position']
             qdot = ob["robot_0"]['joint_state']['velocity']
             action, output = self._planner.computeAction(q, qdot)
+            plan = []
+            for key in output:
+                plan.append(np.concatenate([output[key][:2],np.zeros(1)]))
             ob, *_ = self._env.step(action)
+            self._env.update_visualizations(plan)
 
 def main():
     point_robot_example = PointRobotMpcExample(sys.argv[1])

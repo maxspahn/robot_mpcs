@@ -1,4 +1,3 @@
-import importlib
 from robotmpcs.models.mpcBase import MpcBase
 from robotmpcs.models.inequalities.SelfCollisionAvoidanceConstraints import SelfCollisionAvoidanceConstraints
 from robotmpcs.models.inequalities.JointLimitConstraints import JointLimitConstraints
@@ -22,8 +21,6 @@ class InequalityManager(MpcBase):
             constraint_module_ = getattr(module.models.inequalities, class_name)
             class_ = getattr(constraint_module_, class_name)
             self.inequality_modules.append(class_(self._paramMap, **self._kwargs))
-
-
 
 
 
