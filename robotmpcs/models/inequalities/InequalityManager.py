@@ -6,12 +6,14 @@ from robotmpcs.models.inequalities.InputLimitConstraints import InputLimitConstr
 from robotmpcs.models.inequalities.RadialConstraints import RadialConstraints
 class InequalityManager(MpcBase):
 
-    def __init__(self, ParamMap={}, inequality_list = [], **kwargs):
+    def __init__(self, ParamMap={}, npar=0, inequality_list = [], **kwargs):
         super().__init__(**kwargs)
 
         self._paramMap = ParamMap
+        self._npar = npar
         self._kwargs = kwargs
         self._inequalitiy_list = inequality_list
+
 
     def set_constraints(self):
         # update paramMap
@@ -20,7 +22,9 @@ class InequalityManager(MpcBase):
         for class_name in self._kwargs['mpc']['constraints']:
             constraint_module_ = getattr(module.models.inequalities, class_name)
             class_ = getattr(constraint_module_, class_name)
-            self.inequality_modules.append(class_(self._paramMap, **self._kwargs))
+            self.inequality_modules.append(class_(**self._kwargs))
+            self._paramMap, self._npar = self.inequality_modules[-1].set_parameters(self._paramMap, self._npar)
+        return self._paramMap, self._npar
 
 
 

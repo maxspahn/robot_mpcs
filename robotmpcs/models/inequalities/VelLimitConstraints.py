@@ -2,10 +2,17 @@ import casadi as ca
 from robotmpcs.models.mpcBase import MpcBase
 class VelLimitConstraints(MpcBase):
 
-    def __init__(self, ParamMap={}, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+
+    def set_parameters(self, ParamMap,npar):
         self._paramMap = ParamMap
+        self._npar = npar
+
+        self.addEntry2ParamMap("lower_limits_vel", 2)
+        self.addEntry2ParamMap("upper_limits_vel", 2)
+        return self._paramMap, self._npar
 
 
     def eval_constraint(self, z, p):

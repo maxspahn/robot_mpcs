@@ -51,10 +51,10 @@ class BoxerMpcExample(MpcExample):
                 [-10, 10],
                 [-10, 10],
         ])
-        self._limits_vel = np.array([ #todo add to config
-                [(-4), 4],
-                [(-10), 10],
-        ])
+        # self._limits_vel = np.array([ #todo add to config
+        #         [(-4), 4],
+        #         [(-10), 10],
+        # ])
         self._limits_u = np.array([
                 [-10, 10],
                 [-10, 10],

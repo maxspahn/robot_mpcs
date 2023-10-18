@@ -2,10 +2,15 @@ import casadi as ca
 from robotmpcs.models.mpcBase import MpcBase
 class SelfCollisionAvoidanceConstraints(MpcBase):
 
-    def __init__(self, ParamMap={}, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+
+
+    def set_parameters(self, ParamMap, npar):
         self._paramMap = ParamMap
+        self._npar = npar
+        return self._paramMap, self._npar
 
     def get_number_ineq(self):
         return len(self._robot_config.selfCollision['pairs'])

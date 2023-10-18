@@ -1,10 +1,16 @@
 from robotmpcs.models.mpcBase import MpcBase
 class InputLimitConstraints(MpcBase):
 
-    def __init__(self, ParamMap={}, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+    def set_parameters(self, ParamMap, npar):
         self._paramMap = ParamMap
+        self._npar = npar
+
+        self.addEntry2ParamMap("lower_limits_u", self._nu)
+        self.addEntry2ParamMap("upper_limits_u", self._nu)
+        return self._paramMap, self._npar
 
     def get_number_ineq(self):
         return self._nu * 2

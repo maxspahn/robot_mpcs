@@ -4,9 +4,6 @@ from dataclasses import dataclass
 from forwardkinematics.fksCommon.fk import ForwardKinematics
 from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
 import numpy as np
-from examples.helpers import load_forces_path
-from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
-load_forces_path()
 import forcespro
 import yaml
 from shutil import move, rmtree
@@ -28,27 +25,20 @@ class MpcModel(MpcBase):
                 "s": {"low": np.zeros(1), "high": np.ones(1) * np.inf},
             }
             self.initParamMap()
-        self._inequality_manager = InequalityManager(self._paramMap, **kwargs)
-        self._inequality_manager.set_constraints()
+        self._inequality_manager = InequalityManager(self._paramMap, self._npar, **kwargs)
+        self._paramMap, self._npar = self._inequality_manager.set_constraints()
 
 
     def initParamMap(self):
         self._paramMap = {}
         self._npar = 0
-        self.addEntry2ParamMap("wu", self._nu)
-        self.addEntry2ParamMap("wvel", self._nx-self._n)
-        self.addEntry2ParamMap("w", self._m)
-        if self._config.slack:
-            self._ns = 1
-            self.addEntry2ParamMap("ws", 1)
-        self.addEntry2ParamMap("g", self._m)
+
+
+
         self.addEntry2ParamMap("r_body", 1)
-        self.addEntry2ParamMap("lower_limits", self._n)
-        self.addEntry2ParamMap("upper_limits", self._n)
-        self.addEntry2ParamMap("lower_limits_vel", 2)
-        self.addEntry2ParamMap("upper_limits_vel", 2)
-        self.addEntry2ParamMap("lower_limits_u", self._nu)
-        self.addEntry2ParamMap("upper_limits_u", self._nu) #todo move them to corresponding ineq class
+
+
+
         self.setObstacles()
 
     def setSelfCollisionAvoidance(self, pairs):
@@ -83,7 +73,8 @@ class MpcModel(MpcBase):
         self._dt = dt
 
     def setModel(self):
-        self.objective = GoalMpcObjective(self._paramMap, **self._kwargs)
+        self.objective = GoalMpcObjective(**self._kwargs)
+        self._paramMap, self._npar = self.objective.set_parameters(self._paramMap, self._npar)
         self._model = forcespro.nlp.SymbolicModel(self._N)
         self._model.continuous_dynamics = self.continuous_dynamics
         self._model.objective = self.objective.eval_objective

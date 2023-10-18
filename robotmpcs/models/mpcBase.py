@@ -55,7 +55,8 @@ class MpcBase(object):
         self._m_obst = 3
         self._pairs = []
         self._N = self._config.time_horizon
-        self._paramMap = {}
+
+
 
     def addEntry2ParamMap(self, name, n_par):
         self._paramMap[name] = list(range(self._npar, self._npar + n_par))

@@ -5,12 +5,23 @@ from robotmpcs.models.utils.utils import diagSX
 
 class GoalMpcObjective(MpcBase):
 
-    def __init__(self, _paramMap, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._paramMap = _paramMap
 
 
+    def set_parameters(self, ParamMap,npar):
+        self._paramMap = ParamMap
+        self._npar = npar
 
+        self.addEntry2ParamMap("wu", self._nu)
+        self.addEntry2ParamMap("wvel", self._nx-self._n)
+        self.addEntry2ParamMap("w", self._m)
+        if self._config.slack:
+            self._ns = 1
+            self.addEntry2ParamMap("ws", 1)
+
+        self.addEntry2ParamMap("g", self._m)
+        return self._paramMap, self._npar
 
     def eval_objectiveCommon(self, z, p):
         variables = self.extractVariables(z)
