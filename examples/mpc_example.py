@@ -35,7 +35,6 @@ class MpcExample(object):
         self._render = True
 
     def set_mpc_parameter(self):
-        self._r_body = 0.6
         self._planner.setObstacles(self._obstacles, self._r_body)
         self._planner.setGoal(self._goal)
         if hasattr(self, '_limits'):
