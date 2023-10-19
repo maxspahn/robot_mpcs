@@ -6,6 +6,7 @@ from urdfenvs.robots.generic_urdf.generic_diff_drive_robot import GenericDiffDri
 from urdfenvs.sensors.occupancy_sensor import OccupancySensor
 from mpscenes.obstacles.sphere_obstacle import SphereObstacle
 from mpscenes.goals.goal_composition import GoalComposition
+from urdfenvs.urdf_common.urdf_env import UrdfEnv
 from mpc_example import MpcExample
 from robotmpcs.planner.visualizer import Visualizer
 
@@ -33,7 +34,7 @@ class BoxerMpcExample(MpcExample):
                 "indices": [0, 1],
                 "parent_link": 'origin',
                 "child_link": 'ee_link',
-                "desired_position": [8.2, -0.2],
+                "desired_position": [6.2, -3.2],
                 "epsilon": 0.4,
                 "type": "staticSubGoal"
             }
@@ -41,7 +42,7 @@ class BoxerMpcExample(MpcExample):
         self._goal = GoalComposition(name="goal1", content_dict=goal_dict)
         obst1Dict = {
             "type": "sphere",
-            "geometry": {"position": [4.0, -0.5, 0.0], "radius": 1.0},
+            "geometry": {"position": [4.0, -1.5, 0.0], "radius": 1.0},
         }
         sphereObst1 = SphereObstacle(name="simpleSphere", content_dict=obst1Dict)
         self._obstacles = [sphereObst1]
@@ -61,12 +62,12 @@ class BoxerMpcExample(MpcExample):
         ])
         current_path = os.path.dirname(os.path.abspath(__file__))
 
-        self._env = gym.make(
-            'urdf-env-v0',
-            render=self._render,
-            robots=robots,
-            dt=self._planner._config.time_step
-        )
+        self._env: UrdfEnv = gym.make(
+                'urdf-env-v0',
+                render=self._render,
+                robots=robots,
+                dt=self._planner._config.time_step
+            )
         for i in range(self._config['mpc']['time_horizon']):
             self._env.add_visualization(size=[self._r_body, 0.1])
 
@@ -90,7 +91,7 @@ class BoxerMpcExample(MpcExample):
         self._env.set_spaces()
 
         n_steps = 1000
-        for i in range(n_steps):
+        for _ in range(n_steps):
             q = ob['robot_0']['joint_state']['position']
             qdot = ob['robot_0']['joint_state']['velocity']
             vel = np.array((ob['robot_0']['joint_state']['forward_velocity'], qdot[2]), dtype=float)
@@ -105,11 +106,11 @@ class BoxerMpcExample(MpcExample):
             self._env.update_visualizations(plan)
 
     def check_goal_reaching(self, ob):
-        goal_dist = np.linalg.norm(ob['robot_0']['joint_state']['position'][:2] - self._goal._config.subgoal0.desired_position) # todo remove hard coded dimension
-        if goal_dist<=self._goal._config.subgoal0.epsilon:
+        primary_goal = self._goal.primary_goal()
+        goal_dist = np.linalg.norm(ob['robot_0']['joint_state']['position'][:2] - primary_goal.position()) # todo remove hard coded dimension, replace it with fk instead
+        if goal_dist <= primary_goal.epsilon():
             return True
-        else:
-            return False
+        return False
 
 def main():
     boxer_example = BoxerMpcExample(sys.argv[1])

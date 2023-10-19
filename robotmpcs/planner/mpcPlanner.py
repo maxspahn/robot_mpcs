@@ -74,8 +74,6 @@ class MPCPlanner(object):
             print("FAILED TO LOAD SOLVER")
             raise e
 
-
-
     def reset(self):
         print("RESETTING PLANNER")
         self._x0 = np.zeros(shape=(self._config.time_horizon, self._nx + self._nu + self._ns))
