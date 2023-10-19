@@ -133,7 +133,7 @@ class MpcModel(MpcBase):
         _ = self._model.generate_solver(self._codeoptions)
         with open(self._solverName + '/paramMap.yaml', 'w') as outfile:
             yaml.dump(self._paramMap, outfile, default_flow_style=False)
-        properties = {"nx": self._nx, "nu": self._nu, "npar": self._npar, "ns": self._ns, "m": self._m}
+        properties = {"nx": self._nx, "nu": self._nu, "npar": self._npar, "ns": self._ns, "m": self._m, "constraints": self._inequality_manager.inequality_modules_strs}
         with open(self._solverName + '/properties.yaml', 'w') as outfile:
             yaml.dump(properties, outfile, default_flow_style=False)
         if os.path.exists(location + self._solverName) and os.path.isdir(location + self._solverName):
