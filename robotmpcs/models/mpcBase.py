@@ -1,3 +1,4 @@
+from typing import Dict, List
 import casadi as ca
 from dataclasses import dataclass
 from forwardkinematics.fksCommon.fk import ForwardKinematics
@@ -28,6 +29,12 @@ class RobotConfiguration:
     end_link: str
     base_type: str
 class MpcBase(object):
+    _npar: int
+    _N: int
+    _pairs: List[int]
+    _paramMap: Dict[str,List[int]]
+    _modelName: str
+
     def __init__(self, **kwargs):
         self._config = MpcConfiguration(**kwargs['mpc'])
         self._robot_config = RobotConfiguration(**kwargs['robot'])
@@ -73,10 +80,6 @@ class MpcBase(object):
     def eval_obstacleDistances(self, z, p):
         ineqs = []
         q, *_ = self.extractVariables(z)
-        if self._ns > 0:
-            s = z[self._nx]
-        else:
-            s = 0.0
         if "obst" in self._paramMap.keys():
             obsts = p[self._paramMap["obst"]]
             r_body = p[self._paramMap["r_body"]]

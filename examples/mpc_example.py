@@ -1,9 +1,14 @@
 import os
 import re
+from typing import List
 import yaml
-
 import numpy as np
-from robotmpcs.planner.mpcPlanner import MPCPlanner, SolverDoesNotExistError
+
+from mpscenes.obstacles.collision_obstacle import CollisionObstacle
+from mpscenes.goals.goal_composition import GoalComposition
+from urdfenvs.urdf_common.urdf_env import UrdfEnv
+
+from robotmpcs.planner.mpcPlanner import MPCPlanner
 
 def parse_setup(setup_file: str):
     with open(setup_file, "r") as setup_stream:
@@ -19,6 +24,14 @@ envMap = {
 }
 
 class MpcExample(object):
+    _obstacles: List[CollisionObstacle]
+    _goal: GoalComposition
+    _r_body: float
+    _limits: np.ndarray
+    _limits_u: np.ndarray
+    _limits_vel: np.ndarray
+    _env: UrdfEnv
+
     def __init__(self, config_file_name: str):
         config_file_name = re.search(r'(config/.*\.yaml)', config_file_name).group(1)
         test_setup = os.path.dirname(os.path.realpath(__file__)) + "/" + config_file_name
