@@ -20,8 +20,10 @@ envMap = {
 
 class MpcExample(object):
     def __init__(self, config_file_name: str):
+        config_file_name = re.search(r'(config/.*\.yaml)', config_file_name).group(1)
         test_setup = os.path.dirname(os.path.realpath(__file__)) + "/" + config_file_name
-        self._robot_type = re.findall('\/(\S*)M', config_file_name)[0]
+
+        self._robot_type = re.search(r'/([^/]+)Mpc\.yaml', config_file_name).group(1)
         self._solver_directory = os.path.dirname(os.path.realpath(__file__)) + "/solvers/"
         self._env_name = envMap[self._robot_type]
         setup = parse_setup(test_setup)
