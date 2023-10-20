@@ -6,13 +6,20 @@ mpc:
   time_step: 0.05
   slack: False
   interval: 1
+  initialization: "current_state"
+  constraints: ['RadialConstraints',
+                'SelfCollisionAvoidanceConstraints',
+                'JointLimitConstraints',
+                'InputLimitConstraints']
   weights:
     w: 3.0
-    wvel: 1.0
+    wvel: [1.0, 1.0, 1.0 ,1.0, 1.0, 1.0, 1.0]
     ws: 1e10
     wu: 0.1
-    wobst: 0.00
+    wobst: 0.01
   number_obstacles: 1
+
+  control_mode: "acc"
 robot:
   collision_links: 
     - 'panda_link3'

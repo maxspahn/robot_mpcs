@@ -1,11 +1,8 @@
 import numpy as np
 import yaml
 import os
-import sys
 import forcespro
-import re
-import robotmpcs
-from robotmpcs.models.mpcModel import MpcConfiguration
+from robotmpcs.models.mpcBase import MpcConfiguration
 
 
 
@@ -30,13 +27,13 @@ class EmptyObstacle():
 class PlannerSettingIncomplete(Exception):
     pass
 
-
-
-
 class MPCPlanner(object):
     def __init__(self, robotType, solversDir, **kwargs):
         self._config = MpcConfiguration(**kwargs)
         self._robotType = robotType
+        self._initial_step = True
+
+        #self._visualizer.add_visualization()
         """
         self._paramMap, self._npar, self._nx, self._nu, self._ns = getParameterMap(
             self_config.n, self.m(), self._config.number_obstacles, self.m(), self._config.slack
@@ -81,17 +78,17 @@ class MPCPlanner(object):
         print("RESETTING PLANNER")
         self._x0 = np.zeros(shape=(self._config.time_horizon, self._nx + self._nu + self._ns))
         self._xinit = np.zeros(self._nx)
+        self._initial_step = True
         if self._config.slack:
             self._slack = 0.0
-        self._x0[-1, -1] = 0.1
+        #self._x0[-1, -1] = 0.1 # todo why?
         self._params = np.zeros(shape=(self._npar * self._config.time_horizon), dtype=float)
         for i in range(self._config.time_horizon):
             self._params[
                 [self._npar * i + val for val in self._paramMap["w"]]
             ] = self._config.weights["w"]
-            self._params[
-                [self._npar * i + val for val in self._paramMap["wvel"]]
-            ] = self._config.weights["wvel"]
+            for j, val in enumerate(self._paramMap["wvel"]):
+                self._params[[self._npar * i + val]] = self._config.weights["wvel"][j]
             self._params[
                 [self._npar * i + val for val in self._paramMap["wu"]]
             ] = self._config.weights["wu"]
@@ -114,7 +111,7 @@ class MPCPlanner(object):
             return False
 
 
-    def setObstacles(self, obsts, r_body):
+    def setObstacles(self, obsts, r_body): #todo: need to be updated
         self._r = 0.1
         for i in range(self._config.time_horizon):
             self._params[self._npar * i + self._paramMap["r_body"][0]] = r_body
@@ -123,7 +120,7 @@ class MPCPlanner(object):
                     obst = obsts[j]
                 else:
                     obst = EmptyObstacle()
-                for m_i in range(obst.dim()):
+                for m_i in range(obst.dimension()):
                     paramsIndexObstX = self._npar * i + self._paramMap['obst'][j * (self.m() + 1) + m_i]
                     self._params[paramsIndexObstX] = obst.position()[m_i]
                 paramsIndexObstR = self._npar * i + self._paramMap['obst'][j * (self.m() + 1) + self.m()]
@@ -162,18 +159,38 @@ class MPCPlanner(object):
                     self._npar * i + self._paramMap["upper_limits"][j]
                 ] = limits[1][j]
 
+    def setVelLimits(self, limits_vel):
+        for i in range(self._config.time_horizon):
+            for j in range(2): # todo make dependent on vel dim
+                self._params[
+                    self._npar * i + self._paramMap["lower_limits_vel"][j]
+                ] = limits_vel[0][j]
+                self._params[
+                    self._npar * i + self._paramMap["upper_limits_vel"][j]
+                ] = limits_vel[1][j]
+
+    def setInputLimits(self, limits_u):
+        for i in range(self._config.time_horizon):
+            for j in range(self._nu):
+                self._params[
+                    self._npar * i + self._paramMap["lower_limits_u"][j]
+                ] = limits_u[0][j]
+                self._params[
+                    self._npar * i + self._paramMap["upper_limits_u"][j]
+                ] = limits_u[1][j]
+
     def setGoal(self, goal):
         for i in range(self._config.time_horizon):
             for j in range(self.m()):
-                if j >= len(goal.position()):
+                if j >= len(goal.primary_goal().position()):
                     position = 0
                 else:
-                    position = goal.position()[j]
+                    position = goal.primary_goal().position()[j]
                 self._params[self._npar * i + self._paramMap["g"][j]] = position
     def concretize(self):
         pass
 
-    def shiftHorizon(self, output, ob):
+    def shiftHorizon(self, output):
         for key in output.keys():
             if self._config.time_horizon < 10:
                 stage = int(key[-1:])
@@ -184,10 +201,18 @@ class MPCPlanner(object):
             if stage == 1:
                 continue
             self._x0[stage - 2, 0 : len(output[key])] = output[key]
+            self._x0[-1:, 0 : len(output[key])] = output[key]
 
-    def setX0(self, xinit):
-        for i in range(self._config.time_horizon):
-            self._x0[i][0 : self._nx] = xinit
+    def setX0(self, initialize_type="current_state", initial_step= True):
+        if initialize_type == "current_state" or initialize_type == "previous_plan" and initial_step:
+            for i in range(self._config.time_horizon):
+                self._x0[i][0 : self._nx] = self._xinit
+                self._initial_step = False
+        elif initialize_type == "previous_plan":
+            self.shiftHorizon(self.output)
+        else:
+            np.zeros(shape=(self._config.time_horizon, self._nx + self._nu + self._ns))
+
 
     def solve(self, ob):
         # print("Observation : " , ob[0:self._nx])
@@ -197,8 +222,7 @@ class MPCPlanner(object):
         action = np.zeros(self._nu)
         problem = {}
         problem["xinit"] = self._xinit
-        self._x0[0][0 : self._nx] = self._xinit
-        self.setX0(self._xinit)
+        self.setX0(initialize_type=self._config.initialization, initial_step=self._initial_step)
         problem["x0"] = self._x0.flatten()[:]
         problem["all_parameters"] = self._params
         # debug
@@ -208,11 +232,17 @@ class MPCPlanner(object):
             if self._config.slack:
                 z = np.concatenate((self._xinit, np.array([self._slack])))
             else:
-                z = self._xinit
+                z = self._x0[0,:]
             p = self._params[0:nbPar]
             #J = eval_obj(z, p)
-            ineq = eval_ineq(z, p)
-            #print("ineq : ", ineq)
+            #ineq = eval_ineq(z, p)
+            self._n = 3
+            q = z[0: self._n]
+            qdot = z[self._n: self._nx]
+            qddot = z[self._nx + self._ns: self._nx + self._ns + self._nu]
+            #Jx, Jvel, Js, Jobst = mpc_model.eval_objective(z, p)
+            #mpc_model.eval_objective( z, p)
+            print("test")
             # __import__('pdb').set_trace()
             """
             for i in range(self._config.time_horizon):
@@ -222,24 +252,33 @@ class MPCPlanner(object):
             #print("J : ", J)
             #print('z : ', z)
             #print('xinit : ', self._xinit)
-        output, exitflag, info = self._solver.solve(problem)
+        self.output, exitflag, info = self._solver.solve(problem)
         if exitflag < 0:
             print(exitflag)
         if self._config.time_horizon < 10:
-            key1 = 'x1'
+            key0 = 'x1'
+            key1 = 'x2'
         elif self._config.time_horizon >= 10 and self._config.time_horizon < 100:
-            key1 = 'x01'
+            key0 = 'x01'
+            key1 = 'x02'
         elif self._config.time_horizon >= 100:
-            key1 = 'x001'
-        action = output[key1][-self._nu :]
+            key0 = 'x001'
+            key1 = 'x002'
+        # If in velocity mode, the action should be velocities instead of accelerations
+        if self._config.control_mode == "vel":
+            action = self.output[key1][-self._nu-self._nu: -self._nu]
+        elif self._config.control_mode == "acc":
+            action = self.output[key0][-self._nu:]
+        else:
+            print("No valid control mode specified!")
+            action = np.zeros((self._nu))
         if self._config.slack:
-            self._slack = output[key1][self._nx]
+            self._slack = self.output[key0][self._nx]
             if self._slack > 1e-3:
                 print("slack : ", self._slack)
-        # print('action : ', action)
-        # print("prediction : ", output["x02"][0:self._nx])
-        self.shiftHorizon(output, ob)
-        return action, info
+
+
+        return action, self.output, info
 
     def concretize(self):
         self._actionCounter = self._config.interval
@@ -247,9 +286,9 @@ class MPCPlanner(object):
     def computeAction(self, *args):
         ob = np.concatenate(args)
         if self._actionCounter >= self._config.interval:
-            self._action, info = self.solve(ob)
+            self._action, output, info = self.solve(ob)
             self._actionCounter = 1
         else:
             self._actionCounter += 1
-        return self._action
+        return self._action, output
 

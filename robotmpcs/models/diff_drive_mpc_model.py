@@ -10,13 +10,13 @@ class MpcDiffDriveModel(MpcModel):
         self._n = self._fk.n() + 3
         self._nx = 2 * self._n + 2
         self._nu = 2 + self._fk.n()
-        if initParamMap:
-            self._limits = {
-                "x": {"low": np.ones(self._nx) * -100, "high": np.ones(self._nx) * 100},
-                "u": {"low": np.ones(self._nu) * -100, "high": np.ones(self._nu) * 100},
-                "s": {"low": np.zeros(1), "high": np.ones(1) * np.inf},
-            }
-            self.initParamMap()
+        # if initParamMap:
+        #     self._limits = {
+        #         "x": {"low": np.ones(self._nx) * -100, "high": np.ones(self._nx) * 100},
+        #         "u": {"low": np.ones(self._nu) * -100, "high": np.ones(self._nu) * 100},
+        #         "s": {"low": np.zeros(1), "high": np.ones(1) * np.inf},
+        #     }
+        #     self.initParamMap()
 
     def get_velocity(self, z):
         return z[2*self._n: 2*self._n + self._nu]
