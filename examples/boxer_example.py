@@ -9,6 +9,7 @@ from mpscenes.goals.goal_composition import GoalComposition
 from urdfenvs.urdf_common.urdf_env import UrdfEnv
 from mpc_example import MpcExample
 from robotmpcs.planner.visualizer import Visualizer
+from robotmpcs.planner import globalPlanner
 
 class BoxerMpcExample(MpcExample):
 
@@ -90,6 +91,8 @@ class BoxerMpcExample(MpcExample):
         self._env.add_sensor(sensor, [0])
         self._env.set_spaces()
 
+        global_planner = globalPlanner.GlobalPlanner()
+
         n_steps = 1000
         for _ in range(n_steps):
             q = ob['robot_0']['joint_state']['position']
@@ -104,6 +107,8 @@ class BoxerMpcExample(MpcExample):
                 print("goal reached")
                 break
             self._env.update_visualizations(plan)
+            global_planner.get_occupancy_map(sensor)
+        global_planner.plot_occupancy_map()
 
     def check_goal_reaching(self, ob):
         primary_goal = self._goal.primary_goal()

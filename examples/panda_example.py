@@ -7,6 +7,10 @@ from urdfenvs.sensors.full_sensor import FullSensor
 from mpscenes.goals.goal_composition import GoalComposition
 from mpscenes.obstacles.sphere_obstacle import SphereObstacle
 from mpc_example import MpcExample
+# sys.path.append("../")
+# sys.path.append("")
+# from robotmpcs.helpers import load_forces_path
+# load_forces_path()
 
 class PandaMpcExample(MpcExample):
 
