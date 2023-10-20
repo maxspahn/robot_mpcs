@@ -12,6 +12,7 @@ class MpcConfiguration:
     slack: bool
     interval: int
     constraints: list
+    objectives: list
     number_obstacles: int
     model_name: str
     initialization: str

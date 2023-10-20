@@ -44,7 +44,7 @@ class MpcExample(object):
         self._render = True
 
     def set_mpc_parameter(self):
-        self._planner.setObstacles(self._obstacles, self._r_body)
+        #self._planner.setObstacles(self._obstacles, self._r_body)
         self._planner.setGoal(self._goal)
         if hasattr(self, '_limits'):#todo also check if they were included in solver
             self._planner.setJointLimits(np.transpose(self._limits))
@@ -52,4 +52,6 @@ class MpcExample(object):
             self._planner.setVelLimits(np.transpose(self._limits_vel))
         if hasattr(self, '_limits_u'):
             self._planner.setInputLimits(np.transpose(self._limits_u))
+        if hasattr(self, '_lin_constr'):
+            self._planner.setLinearConstr(self._lin_constr)
 

@@ -3,3 +3,4 @@ from robotmpcs.models.inequalities.JointLimitConstraints import JointLimitConstr
 from robotmpcs.models.inequalities.VelLimitConstraints import VelLimitConstraints
 from robotmpcs.models.inequalities.InputLimitConstraints import InputLimitConstraints
 from robotmpcs.models.inequalities.RadialConstraints import RadialConstraints
+from robotmpcs.models.inequalities.LinearConstraints import LinearConstraints

@@ -3,6 +3,7 @@ import yaml
 import os
 import forcespro
 from robotmpcs.models.mpcBase import MpcConfiguration
+from robotmpcs.models.utils.utils import parse_setup
 
 
 
@@ -73,6 +74,15 @@ class MPCPlanner(object):
         except Exception as e:
             print("FAILED TO LOAD SOLVER")
             raise e
+        setup = parse_setup('boxerMpc.yaml')
+        setup['robot']['urdf_file'] = os.path.dirname(os.path.abspath(__file__)) + "/assets/" + str(robot_type) + "/" + \
+                                      setup['robot']['urdf_file']
+        if setup['robot']['base_type'] == 'holonomic':
+            mpc_model = MpcModel(initParamMap=True, **setup)
+        elif setup['robot']['base_type'] == 'diffdrive':
+            mpc_model = MpcDiffDriveModel(initParamMap=True, **setup)
+        mpc_model.setModel()
+        mpc_model.setCodeoptions()
 
     def reset(self):
         print("RESETTING PLANNER")
@@ -85,10 +95,10 @@ class MPCPlanner(object):
         self._params = np.zeros(shape=(self._npar * self._config.time_horizon), dtype=float)
         for i in range(self._config.time_horizon):
             self._params[
-                [self._npar * i + val for val in self._paramMap["w"]]
+                [self._npar * i + val for val in self._paramMap["wgoal"]]
             ] = self._config.weights["w"]
-            for j, val in enumerate(self._paramMap["wvel"]):
-                self._params[[self._npar * i + val]] = self._config.weights["wvel"][j]
+            # for j, val in enumerate(self._paramMap["wvel"]):
+            #     self._params[[self._npar * i + val]] = self._config.weights["wvel"][j]
             self._params[
                 [self._npar * i + val for val in self._paramMap["wu"]]
             ] = self._config.weights["wu"]
@@ -96,10 +106,10 @@ class MPCPlanner(object):
                 self._params[
                     [self._npar * i + val for val in self._paramMap["ws"]]
                 ] = self._config.weights["ws"]
-            if 'wobst' in self._config.weights:
-                self._params[
-                    [self._npar * i + val for val in self._paramMap["wobst"]]
-                ] = self._config.weights["wobst"]
+            # if 'wobst' in self._config.weights:
+            #     self._params[
+            #         [self._npar * i + val for val in self._paramMap["wobst"]]
+            #     ] = self._config.weights["wobst"]
 
     def m(self):
         return self._properties['m']
@@ -125,6 +135,13 @@ class MPCPlanner(object):
                     self._params[paramsIndexObstX] = obst.position()[m_i]
                 paramsIndexObstR = self._npar * i + self._paramMap['obst'][j * (self.m() + 1) + self.m()]
                 self._params[paramsIndexObstR] = obst.radius()
+
+    def setLinearConstr(self, lin_constr):
+        for j in range(self._config.time_horizon):
+            for i in range(self._config.number_obstacles):
+                for m in range(4):
+                    idx = self._npar * j + self._paramMap["lin_constrs_" + str(i)][m]
+                    self._params[idx] = lin_constr[i][m]
 
     def updateDynamicObstacles(self, obstArray):
         nbDynamicObsts = int(obstArray.size / 3 / self.m())
@@ -159,6 +176,8 @@ class MPCPlanner(object):
                     self._npar * i + self._paramMap["upper_limits"][j]
                 ] = limits[1][j]
 
+
+
     def setVelLimits(self, limits_vel):
         for i in range(self._config.time_horizon):
             for j in range(2): # todo make dependent on vel dim
@@ -186,7 +205,7 @@ class MPCPlanner(object):
                     position = 0
                 else:
                     position = goal.primary_goal().position()[j]
-                self._params[self._npar * i + self._paramMap["g"][j]] = position
+                self._params[self._npar * i + self._paramMap["goal"][j]] = position
     def concretize(self):
         pass
 
@@ -228,30 +247,7 @@ class MPCPlanner(object):
         # debug
         debug = False
         if debug:
-            nbPar = int(len(self._params)/self._config.time_horizon)
-            if self._config.slack:
-                z = np.concatenate((self._xinit, np.array([self._slack])))
-            else:
-                z = self._x0[0,:]
-            p = self._params[0:nbPar]
-            #J = eval_obj(z, p)
-            #ineq = eval_ineq(z, p)
-            self._n = 3
-            q = z[0: self._n]
-            qdot = z[self._n: self._nx]
-            qddot = z[self._nx + self._ns: self._nx + self._ns + self._nu]
-            #Jx, Jvel, Js, Jobst = mpc_model.eval_objective(z, p)
-            #mpc_model.eval_objective( z, p)
-            print("test")
-            # __import__('pdb').set_trace()
-            """
-            for i in range(self._config.time_horizon):
-                z = self._x0[i]
-                ineq = eval_ineq(z, p)
-            """
-            #print("J : ", J)
-            #print('z : ', z)
-            #print('xinit : ', self._xinit)
+            print('debugging')
         self.output, exitflag, info = self._solver.solve(problem)
         if exitflag < 0:
             print(exitflag)

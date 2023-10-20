@@ -5,6 +5,7 @@ class VelLimitConstraints(MpcBase):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        self._n_ineq = 2 # todo adapt dimension
 
     def set_parameters(self, ParamMap,npar):
         self._paramMap = ParamMap

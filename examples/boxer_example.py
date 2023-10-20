@@ -60,6 +60,8 @@ class BoxerMpcExample(MpcExample):
                 [-10, 10],
                 [-10, 10],
         ])
+
+        self._lin_constr = [np.array([1, 0, 0, 1.5])]
         current_path = os.path.dirname(os.path.abspath(__file__))
 
         self._env: UrdfEnv = gym.make(
@@ -70,6 +72,8 @@ class BoxerMpcExample(MpcExample):
             )
         for i in range(self._config['mpc']['time_horizon']):
             self._env.add_visualization(size=[self._r_body, 0.1])
+
+
 
     def run(self):
         q0 = np.median(self._limits, axis = 1)
