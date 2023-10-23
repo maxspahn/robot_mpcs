@@ -76,6 +76,9 @@ class MpcExample(object):
                 except KeyError:
                     print('The required attributes for setting ' + objective + ' are not defined in the config file')
                     sys.exit(1)
+            else:
+                print('No function to set the parameters for this objective is defined')
+                sys.exit(1)
 
         for constraint in constraints:
             if constraint == 'JointLimitConstraints':
@@ -100,5 +103,18 @@ class MpcExample(object):
                 except AttributeError:
                     print('The required attributes for setting ' + constraint + ' are not defined')
                     sys.exit(1)
+            elif constraint == 'RadialConstraints':
+                try: self._planner.setRadialConstraints(self._obstacles, self._r_body)
+                except AttributeError:
+                    print('The required attributes for setting ' + constraint + ' are not defined')
+                    sys.exit(1)
+            elif constraint == 'SelfCollisionAvoidanceConstraints':
+                try: self._planner.setSelfCollisionAvoidanceConstraints(self._r_body)
+                except AttributeError:
+                    print('The required attributes for setting ' + constraint + ' are not defined')
+                    sys.exit(1)
+            else:
+                print('No function to set the parameters for this constraint type is defined')
+                sys.exit(1)
 
 

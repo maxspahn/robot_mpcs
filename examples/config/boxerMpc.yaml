@@ -33,4 +33,4 @@ robot:
   end_link: ee_link
   base_type: diffdrive
 example:
-  debug: True
+  debug: False

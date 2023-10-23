@@ -118,7 +118,7 @@ class MPCPlanner(object):
             return False
 
 
-    def setObstacles(self, obsts, r_body): #todo: need to be updated
+    def setRadialConstraints(self, obsts, r_body): #todo: need to be updated
         self._r = 0.1
         for i in range(self._config.time_horizon):
             self._params[self._npar * i + self._paramMap["r_body"][0]] = r_body
