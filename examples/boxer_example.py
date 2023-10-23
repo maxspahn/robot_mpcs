@@ -61,7 +61,7 @@ class BoxerMpcExample(MpcExample):
                 [-10, 10],
         ])
 
-        self._lin_constr = [np.array([1, 0, 0, 1.5])]
+        self._lin_constr = [np.array([1, 0, 0, -1.5])]
         current_path = os.path.dirname(os.path.abspath(__file__))
 
         self._env: UrdfEnv = gym.make(

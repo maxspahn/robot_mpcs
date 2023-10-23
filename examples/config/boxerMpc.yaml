@@ -31,3 +31,5 @@ robot:
   root_link: base_link
   end_link: ee_link
   base_type: diffdrive
+example:
+  debug: True

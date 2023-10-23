@@ -29,7 +29,7 @@ class PlannerSettingIncomplete(Exception):
     pass
 
 class MPCPlanner(object):
-    def __init__(self, robotType, solversDir, **kwargs):
+    def __init__(self, robotType, solversDir, mpc_model=None, debug=False, **kwargs):
         self._config = MpcConfiguration(**kwargs)
         self._robotType = robotType
         self._initial_step = True
@@ -40,6 +40,7 @@ class MPCPlanner(object):
             self_config.n, self.m(), self._config.number_obstacles, self.m(), self._config.slack
         )
         """
+        self._debug = debug
         dt_str = str(self._config.time_step).replace(".", "")
         self._solverFile = (
             solversDir
@@ -74,15 +75,11 @@ class MPCPlanner(object):
         except Exception as e:
             print("FAILED TO LOAD SOLVER")
             raise e
-        setup = parse_setup('boxerMpc.yaml')
-        setup['robot']['urdf_file'] = os.path.dirname(os.path.abspath(__file__)) + "/assets/" + str(robot_type) + "/" + \
-                                      setup['robot']['urdf_file']
-        if setup['robot']['base_type'] == 'holonomic':
-            mpc_model = MpcModel(initParamMap=True, **setup)
-        elif setup['robot']['base_type'] == 'diffdrive':
-            mpc_model = MpcDiffDriveModel(initParamMap=True, **setup)
-        mpc_model.setModel()
-        mpc_model.setCodeoptions()
+
+        if self._debug:
+            self._mpc_model = mpc_model
+
+
 
     def reset(self):
         print("RESETTING PLANNER")
@@ -166,6 +163,10 @@ class MPCPlanner(object):
         for i in range(self._config.time_horizon):
             self._params[self._npar * i + self._paramMap["r_body"][0]] = r_body
 
+    def setCollisionAvoidance(self, r_body):
+        for i in range(self._config.time_horizon):
+            self._params[self._npar * i + self._paramMap["r_body"][0]] = r_body
+
     def setJointLimits(self, limits):
         for i in range(self._config.time_horizon):
             for j in range(self._config.n):
@@ -245,9 +246,15 @@ class MPCPlanner(object):
         problem["x0"] = self._x0.flatten()[:]
         problem["all_parameters"] = self._params
         # debug
-        debug = False
-        if debug:
+
+        if self._debug:
             print('debugging')
+            z = problem["xinit"]
+            p = problem["all_parameters"]
+            ineq = self._mpc_model._model.ineq(z, p)
+            print(self._config.constraints)
+            print("Inequalities: {}".format(ineq))
+
         self.output, exitflag, info = self._solver.solve(problem)
         if exitflag < 0:
             print(exitflag)

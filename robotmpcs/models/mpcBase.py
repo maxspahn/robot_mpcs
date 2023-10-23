@@ -38,6 +38,7 @@ class MpcBase(object):
 
     def __init__(self, **kwargs):
         self._config = MpcConfiguration(**kwargs['mpc'])
+        self._debug = kwargs['example']['debug']
         self._robot_config = RobotConfiguration(**kwargs['robot'])
         with open(self._robot_config.urdf_file, 'r') as f:
             urdf = f.read()

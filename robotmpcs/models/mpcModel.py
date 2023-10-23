@@ -125,9 +125,10 @@ class MpcModel(MpcBase):
             self._codeoptions.optlevel = 3
 
     def generateSolver(self, location="./"):
-        if self._config.debug:
-            location += 'debug/'
+
         _ = self._model.generate_solver(self._codeoptions)
+        if self._debug:
+            location += 'debug/'
         with open(self._solverName + '/paramMap.yaml', 'w') as outfile:
             yaml.dump(self._paramMap, outfile, default_flow_style=False)
         properties = {"nx": self._nx, "nu": self._nu, "npar": self._npar, "ns": self._ns, "m": self._m, "constraints": self._inequality_manager.inequality_modules_strs}

@@ -1,6 +1,9 @@
 from robotmpcs.models.mpcBase import MpcBase
 from robotmpcs.models.utils.utils import point_to_plane
 class LinearConstraints(MpcBase):
+    '''
+    takes plane defined as ax + by + cz + d = 0 to set linear constraints
+    '''
 
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
@@ -14,10 +17,7 @@ class LinearConstraints(MpcBase):
         for i in range(self._config.number_obstacles):
             self.addEntry2ParamMap("lin_constrs_" + str(i), 4)
 
-
         return self._paramMap, self._npar
-
-
 
 
     def eval_constraint(self, z, p):

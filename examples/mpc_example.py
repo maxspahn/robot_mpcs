@@ -9,6 +9,9 @@ from urdfenvs.urdf_common.urdf_env import UrdfEnv
 
 from robotmpcs.planner.mpcPlanner import MPCPlanner
 
+from robotmpcs.models.diff_drive_mpc_model import MpcDiffDriveModel
+from robotmpcs.models.mpcModel import MpcModel
+
 
 envMap = {
     'planarArm': 'nLink-reacher-acc-v0', 
@@ -34,9 +37,21 @@ class MpcExample(object):
         self._solver_directory = os.path.dirname(os.path.realpath(__file__)) + "/solvers/"
         self._env_name = envMap[self._robot_type]
         self._config = parse_setup(test_setup)
+
+        self._config['robot']['urdf_file'] = os.path.dirname(os.path.abspath(__file__)) + "/assets/" + str(self._robot_type) + "/" + \
+                                      self._config['robot']['urdf_file']
+        if self._config['robot']['base_type'] == 'holonomic':
+            mpc_model = MpcModel(initParamMap=True, **self._config)
+        elif self._config['robot']['base_type'] == 'diffdrive':
+            mpc_model = MpcDiffDriveModel(initParamMap=True, **self._config)
+        mpc_model.setModel()
+        mpc_model.setCodeoptions()
+
         self._planner = MPCPlanner(
             self._robot_type,
             self._solver_directory,
+            mpc_model,
+            self._config['example']['debug'],
             **self._config['mpc'])
         self._planner.concretize()
         self._planner.reset()
@@ -45,6 +60,7 @@ class MpcExample(object):
 
     def set_mpc_parameter(self):
         #self._planner.setObstacles(self._obstacles, self._r_body)
+        self._planner.setCollisionAvoidance(self._r_body)
         self._planner.setGoal(self._goal)
         if hasattr(self, '_limits'):#todo also check if they were included in solver
             self._planner.setJointLimits(np.transpose(self._limits))
