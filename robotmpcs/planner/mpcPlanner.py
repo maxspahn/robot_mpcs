@@ -133,12 +133,14 @@ class MPCPlanner(object):
                 paramsIndexObstR = self._npar * i + self._paramMap['obst'][j * (self.m() + 1) + self.m()]
                 self._params[paramsIndexObstR] = obst.radius()
 
-    def setLinearConstr(self, lin_constr):
+    def setLinearConstraints(self, lin_constr, r_body):
         for j in range(self._config.time_horizon):
+            self._params[self._npar * j + self._paramMap["r_body"][0]] = r_body
             for i in range(self._config.number_obstacles):
                 for m in range(4):
                     idx = self._npar * j + self._paramMap["lin_constrs_" + str(i)][m]
                     self._params[idx] = lin_constr[i][m]
+
 
     def updateDynamicObstacles(self, obstArray):
         nbDynamicObsts = int(obstArray.size / 3 / self.m())
@@ -159,13 +161,11 @@ class MPCPlanner(object):
                 paramsIndexObstR = self._npar * i + self._paramMap['obst'][j * (self.m() + 1) + self.m()]
                 self._params[paramsIndexObstR] = self._r
 
-    def setSelfCollisionAvoidance(self, r_body):
+    def setSelfCollisionAvoidanceConstraints(self, r_body):
         for i in range(self._config.time_horizon):
             self._params[self._npar * i + self._paramMap["r_body"][0]] = r_body
 
-    def setCollisionAvoidance(self, r_body):
-        for i in range(self._config.time_horizon):
-            self._params[self._npar * i + self._paramMap["r_body"][0]] = r_body
+
 
     def setJointLimits(self, limits):
         for i in range(self._config.time_horizon):
@@ -199,7 +199,7 @@ class MPCPlanner(object):
                     self._npar * i + self._paramMap["upper_limits_u"][j]
                 ] = limits_u[1][j]
 
-    def setGoal(self, goal):
+    def setGoalReaching(self, goal):
         for i in range(self._config.time_horizon):
             for j in range(self.m()):
                 if j >= len(goal.primary_goal().position()):
@@ -207,6 +207,13 @@ class MPCPlanner(object):
                 else:
                     position = goal.primary_goal().position()[j]
                 self._params[self._npar * i + self._paramMap["goal"][j]] = position
+
+    def setConstraintAvoidance(self):
+        for i in range(self._config.time_horizon):
+            self._params[
+                [self._npar * i + val for val in self._paramMap["wconstr"]]
+            ] = self._config.weights["wconstr"]
+
     def concretize(self):
         pass
 

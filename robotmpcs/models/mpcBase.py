@@ -65,11 +65,10 @@ class MpcBase(object):
         self._pairs = []
         self._N = self._config.time_horizon
 
-
-
     def addEntry2ParamMap(self, name, n_par):
-        self._paramMap[name] = list(range(self._npar, self._npar + n_par))
-        self._npar += n_par
+        if name not in self._paramMap:
+            self._paramMap[name] = list(range(self._npar, self._npar + n_par))
+            self._npar += n_par
 
     def get_velocity(self, z):
         return  z[self._n: self._nx]

@@ -10,6 +10,9 @@ class SelfCollisionAvoidanceConstraints(MpcBase):
     def set_parameters(self, ParamMap, npar):
         self._paramMap = ParamMap
         self._npar = npar
+
+        self.addEntry2ParamMap("r_body", 1)
+
         return self._paramMap, self._npar
 
     def eval_constraint(self, z, p):

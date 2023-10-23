@@ -41,7 +41,7 @@ class MpcModel(MpcBase):
         self._paramMap = {}
         self._npar = 0
 
-        self.addEntry2ParamMap("r_body", 1)
+
 
 
     def setSelfCollisionAvoidance(self, pairs):
@@ -125,7 +125,6 @@ class MpcModel(MpcBase):
             self._codeoptions.optlevel = 3
 
     def generateSolver(self, location="./"):
-
         _ = self._model.generate_solver(self._codeoptions)
         if self._debug:
             location += 'debug/'

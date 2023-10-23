@@ -20,6 +20,7 @@ mpc:
     ws: 1e10
     wu: 0.01
     wobst: 0.5
+    wconstr: [0.5, 0.0, 0.0, 0.0]
   number_obstacles: 1
   control_mode: "acc"
 robot:

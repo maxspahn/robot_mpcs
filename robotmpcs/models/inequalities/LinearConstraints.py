@@ -14,6 +14,7 @@ class LinearConstraints(MpcBase):
         self._paramMap = ParamMap
         self._npar = npar
 
+        self.addEntry2ParamMap("r_body", 1)
         for i in range(self._config.number_obstacles):
             self.addEntry2ParamMap("lin_constrs_" + str(i), 4)
 

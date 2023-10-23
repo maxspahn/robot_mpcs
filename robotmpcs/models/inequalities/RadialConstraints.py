@@ -12,6 +12,7 @@ class RadialConstraints(MpcBase):
         self._paramMap = ParamMap
         self._npar = npar
 
+        self.addEntry2ParamMap("r_body", 1)
         self.addEntry2ParamMap("obst", 4 * self._config.number_obstacles)
 
         return self._paramMap, self._npar
