@@ -3,7 +3,6 @@ import yaml
 import os
 import forcespro
 from robotmpcs.models.mpcBase import MpcConfiguration
-from robotmpcs.planner.sensor_conversion.free_space_decomposition import FreeSpaceDecomposition
 
 
 
@@ -78,12 +77,6 @@ class MPCPlanner(object):
         if self._debug:
             self._mpc_model = mpc_model
 
-        self._fsd = FreeSpaceDecomposition(
-            np.array([0.0, 0.0, 0.0]),
-            max_radius=10,
-            number_constraints=1,
-        )
-
 
 
     def reset(self):
@@ -145,27 +138,6 @@ class MPCPlanner(object):
                 for m in range(4):
                     idx = self._npar * j + self._paramMap["lin_constrs_" + str(i)][m]
                     self._params[idx] = lin_constr[i][m]
-
-    def updateLinearConstraints(self, lidar_obs=[], lidar_pos=[0,0], r_body=0.0, nb_rays=64):
-        # get free space decomposition
-        relative_positions = np.concatenate(
-            (
-                np.reshape(lidar_obs, (nb_rays, 2)),
-                np.zeros((nb_rays, 1)),
-            ),
-            axis=1,
-        )
-        self._height = lidar_pos[2]
-        absolute_positions = relative_positions + np.repeat(
-            lidar_pos[np.newaxis, :], nb_rays, axis=0
-        )
-        self._fsd.set_position(lidar_pos)
-        self._fsd.compute_constraints(absolute_positions)
-        lin_constr= self._fsd.aslist()
-
-        self.setLinearConstraints(lin_constr, r_body)
-        return self._fsd, self._height
-
 
 
     def updateDynamicObstacles(self, obstArray):
