@@ -5,6 +5,7 @@ import gymnasium as gym
 import pybullet as p
 from urdfenvs.robots.generic_urdf.generic_diff_drive_robot import GenericDiffDriveRobot
 from urdfenvs.sensors.lidar import Lidar
+from urdfenvs.sensors.free_space_decomposition import FreeSpaceDecompositionSensor
 from mpscenes.obstacles.sphere_obstacle import SphereObstacle
 from mpscenes.goals.goal_composition import GoalComposition
 from urdfenvs.urdf_common.urdf_env import UrdfEnv
@@ -77,8 +78,24 @@ class BoxerMpcExample(MpcExample):
         # add sensor
         val = 40
         number_lidar_rays = 64
-        lidar = Lidar("ee_joint", nb_rays=number_lidar_rays, raw_data=False)
+        lidar = Lidar(
+                "ee_joint",
+                nb_rays=number_lidar_rays,
+                raw_data=False,
+                plotting_interval=1,
+                angle_limits=np.array([-np.pi + np.pi/8, -np.pi/8]),
+        )
+        fsd_sensor = FreeSpaceDecompositionSensor(
+                "ee_joint",
+                max_radius= 5,
+                number_constraints=5,
+                nb_rays=number_lidar_rays,
+                angle_limits=np.array([-np.pi + np.pi/8, -np.pi/8]),
+                plotting_interval=10, 
+                plotting_interval_fsd=10
+        )
         self._env.add_sensor(lidar, [0])
+        self._env.add_sensor(fsd_sensor, [0])
         self._env.set_spaces()
 
         q0 = np.median(self._limits, axis = 1)
@@ -92,12 +109,14 @@ class BoxerMpcExample(MpcExample):
             q = ob['robot_0']['joint_state']['position']
             qdot = ob['robot_0']['joint_state']['velocity']
             vel = np.array((ob['robot_0']['joint_state']['forward_velocity'], qdot[2]), dtype=float)
-            lidar_obs = ob['robot_0']['LidarSensor'].reshape((number_lidar_rays, 2))
+            fsd_obs = ob['robot_0']["FreeSpaceDecompSensor"]
 
 
-            fsd, height = self._planner.updateLinearConstraints(lidar_obs, q, self._r_body, number_lidar_rays)
-            visualize_constraints(fsd, height)
-            action,output = self._planner.computeAction(q, qdot, vel, lidar_obs)
+            
+            linear_constraints = list(fsd_obs.values())
+            self._planner.setLinearConstraints(linear_constraints, r_body=self._r_body)
+            action,output = self._planner.computeAction(q, qdot, vel)
+            print(action)
             plan = []
             for key in output:
                 plan.append(np.concatenate([output[key][:2],np.zeros(1)]))
