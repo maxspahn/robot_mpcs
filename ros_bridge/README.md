@@ -38,7 +38,8 @@ Launch mpc planner
 ```bash
 cd ros_bridge
 source devel/setup.{zsh|bash}
-roslaunch robotmpcs_ros boxerr_mpc.launch
+roslaunch boxer_gazebo boxer_world.launch
+roslaunch robotmpcs_ros boxer_mpc.launch
 ```
 
 Now, you can see a topic to publish the goal to.
