@@ -1,0 +1,6 @@
+[submodule "ros_bridge/src/boxer"]
+	path = ros_bridge/src/boxer
+	url = git@github.com:boxer-cpr/boxer.git
+[submodule "ros_bridge/src/boxer_simulator"]
+	path = ros_bridge/src/boxer_simulator
+	url = git@github.com:boxer-cpr/boxer_simulator.git
