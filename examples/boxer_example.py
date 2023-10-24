@@ -2,18 +2,19 @@ import sys
 import os
 import numpy as np
 import gymnasium as gym
+import pybullet as p
 from urdfenvs.robots.generic_urdf.generic_diff_drive_robot import GenericDiffDriveRobot
-from urdfenvs.sensors.occupancy_sensor import OccupancySensor
+from urdfenvs.sensors.lidar import Lidar
 from mpscenes.obstacles.sphere_obstacle import SphereObstacle
 from mpscenes.goals.goal_composition import GoalComposition
 from urdfenvs.urdf_common.urdf_env import UrdfEnv
 from mpc_example import MpcExample
-from robotmpcs.planner.visualizer import Visualizer
+from utils import visualize_constraints
+
 
 class BoxerMpcExample(MpcExample):
 
     def initialize_environment(self):
-        self._visualizer = Visualizer()
 
         robots = [
             GenericDiffDriveRobot(
@@ -73,30 +74,30 @@ class BoxerMpcExample(MpcExample):
 
 
     def run(self):
+        # add sensor
+        val = 40
+        number_lidar_rays = 64
+        lidar = Lidar("ee_joint", nb_rays=number_lidar_rays, raw_data=False)
+        self._env.add_sensor(lidar, [0])
+        self._env.set_spaces()
+
         q0 = np.median(self._limits, axis = 1)
         ob, *_ = self._env.reset(pos=q0)
         for obstacle in self._obstacles:
             self._env.add_obstacle(obstacle)
         self._env.add_goal(self._goal)
 
-        # add sensor
-        val = 40
-        sensor = OccupancySensor(
-            limits=np.array([[-5, 5], [-5, 5], [0, 50 / val]]),
-            resolution=np.array([val + 1, val + 1, 5], dtype=int),
-            interval=100,
-            plotting_interval=100,
-        )
-
-        self._env.add_sensor(sensor, [0])
-        self._env.set_spaces()
-
         n_steps = 1000
         for _ in range(n_steps):
             q = ob['robot_0']['joint_state']['position']
             qdot = ob['robot_0']['joint_state']['velocity']
             vel = np.array((ob['robot_0']['joint_state']['forward_velocity'], qdot[2]), dtype=float)
-            action,output = self._planner.computeAction(q, qdot, vel)
+            lidar_obs = ob['robot_0']['LidarSensor'].reshape((number_lidar_rays, 2))
+
+
+            fsd, height = self._planner.updateLinearConstraints(lidar_obs, q, self._r_body, number_lidar_rays)
+            visualize_constraints(fsd, height)
+            action,output = self._planner.computeAction(q, qdot, vel, lidar_obs)
             plan = []
             for key in output:
                 plan.append(np.concatenate([output[key][:2],np.zeros(1)]))
