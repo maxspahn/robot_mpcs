@@ -66,14 +66,12 @@ class FreeSpaceDecomposition(object):
 
     def __init__(
         self,
-        position: np.ndarray,
         number_constraints: int = 10,
         max_radius: float = 1.0,
     ):
         self._number_constraints = number_constraints
         self._max_radius = max_radius
         self._constraints = []
-        self._position = position
 
     def set_position(self, position: np.ndarray):
         self._position = position
