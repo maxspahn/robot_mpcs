@@ -1,3 +1,4 @@
+from typing import Tuple
 import numpy as np
 import yaml
 import os
@@ -289,7 +290,7 @@ class MPCPlanner(object):
     def concretize(self):
         self._actionCounter = self._config.interval
 
-    def computeAction(self, *args):
+    def computeAction(self, *args) -> Tuple[np.ndarray, dict, int]:
         ob = np.concatenate(args[:3])
 
         if self._actionCounter >= self._config.interval:
