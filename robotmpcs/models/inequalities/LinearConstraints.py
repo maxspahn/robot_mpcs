@@ -1,5 +1,5 @@
 from robotmpcs.models.mpcBase import MpcBase
-from robotmpcs.models.utils.utils import point_to_plane
+from robotmpcs.utils.utils import point_to_plane
 class LinearConstraints(MpcBase):
     '''
     takes plane defined as ax + by + cz + d = 0 to set linear constraints

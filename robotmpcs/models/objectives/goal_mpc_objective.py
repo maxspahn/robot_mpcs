@@ -1,7 +1,7 @@
 import casadi as ca
 import numpy as np
 from robotmpcs.models.mpcBase import MpcBase
-from robotmpcs.models.utils.utils import diagSX
+from robotmpcs.utils.utils import diagSX
 
 class GoalMpcObjective(MpcBase):
 

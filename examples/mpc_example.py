@@ -3,10 +3,11 @@ import re
 import sys
 from typing import List
 import numpy as np
-from utils import parse_setup
 from mpscenes.obstacles.collision_obstacle import CollisionObstacle
 from mpscenes.goals.goal_composition import GoalComposition
 from urdfenvs.urdf_common.urdf_env import UrdfEnv
+
+from robotmpcs.utils.utils import parse_setup
 
 from robotmpcs.planner.mpcPlanner import MPCPlanner
 

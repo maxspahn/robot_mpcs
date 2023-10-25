@@ -9,8 +9,8 @@ from mpscenes.obstacles.sphere_obstacle import SphereObstacle
 from mpscenes.goals.goal_composition import GoalComposition
 from urdfenvs.urdf_common.urdf_env import UrdfEnv
 from mpc_example import MpcExample
-from robotmpcs.models.utils.free_space_decomposition import FreeSpaceDecomposition
-from robotmpcs.models.utils.utils import visualize_constraints_in_pybullet
+from robotmpcs.utils.free_space_decomposition import FreeSpaceDecomposition
+from robotmpcs.utils.utils import visualize_constraints_in_pybullet
 
 
 class BoxerMpcExample(MpcExample):

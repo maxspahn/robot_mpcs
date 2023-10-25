@@ -1,6 +1,6 @@
 import casadi as ca
 from robotmpcs.models.mpcBase import MpcBase
-from robotmpcs.models.utils.utils import diagSX
+from robotmpcs.utils.utils import diagSX
 
 class ConstraintAvoidance(MpcBase):
 

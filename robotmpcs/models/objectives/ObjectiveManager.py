@@ -1,6 +1,6 @@
 import casadi as ca
 from robotmpcs.models.mpcBase import MpcBase
-from robotmpcs.models.utils.utils import diagSX
+from robotmpcs.utils.utils import diagSX
 
 class ObjectiveManager(MpcBase):
     def __init__(self, ParamMap={}, npar=0, ineq_modules=[], **kwargs):
