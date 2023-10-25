@@ -137,7 +137,7 @@ class MPCPlanner(object):
             for i in range(self._config.number_obstacles):
                 for m in range(4):
                     idx = self._npar * j + self._paramMap["lin_constrs_" + str(i)][m]
-                    self._params[idx] = lin_constr[i][m]
+                    self._params[idx] = lin_constr[j][i][m]
 
 
     def updateDynamicObstacles(self, obstArray):
@@ -253,7 +253,8 @@ class MPCPlanner(object):
             print('debugging')
             z = problem["xinit"]
             p = problem["all_parameters"]
-            ineq = self._mpc_model._model.ineq(z, p)
+            j = 1
+            ineq = self._mpc_model._model.ineq[j](z, p)
             print(self._config.constraints)
             print("Inequalities: {}".format(ineq))
 
@@ -283,7 +284,7 @@ class MPCPlanner(object):
                 print("slack : ", self._slack)
 
 
-        return action, self.output, info
+        return action, self.output, info, exitflag
 
     def concretize(self):
         self._actionCounter = self._config.interval
@@ -292,9 +293,9 @@ class MPCPlanner(object):
         ob = np.concatenate(args[:3])
 
         if self._actionCounter >= self._config.interval:
-            self._action, output, info = self.solve(ob)
+            self._action, output, info, exitflag = self.solve(ob)
             self._actionCounter = 1
         else:
             self._actionCounter += 1
-        return self._action, output
+        return self._action, output, exitflag
 

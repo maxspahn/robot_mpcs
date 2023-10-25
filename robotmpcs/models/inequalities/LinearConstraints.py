@@ -15,8 +15,9 @@ class LinearConstraints(MpcBase):
         self._npar = npar
 
         self.addEntry2ParamMap("r_body", 1)
-        for i in range(self._config.number_obstacles):
-            self.addEntry2ParamMap("lin_constrs_" + str(i), 4)
+        for j in range(self._N):
+            for i in range(self._config.number_obstacles):
+                    self.addEntry2ParamMap("lin_constrs_" + str(i), 4)
 
         return self._paramMap, self._npar
 
@@ -25,7 +26,7 @@ class LinearConstraints(MpcBase):
         ineqs = []
         q, *_ = self.extractVariables(z)
         r_body = p[self._paramMap["r_body"]]
-        for j, collision_link in enumerate(self._robot_config.collision_links):
+        for l, collision_link in enumerate(self._robot_config.collision_links):
             pos = self._fk.fk(
                 q,
                 self._robot_config.root_link,
@@ -33,7 +34,7 @@ class LinearConstraints(MpcBase):
                 positionOnly=True
             )[0:self._m]
             for i in range(self._config.number_obstacles):
-                lin_constrs = p[self._paramMap["lin_constrs_" + str(i)]]
-                dist = point_to_plane(point=pos, plane=lin_constrs)
-                ineqs.append(dist - r_body)
+                    lin_constrs = p[self._paramMap["lin_constrs_" + str(i)]]
+                    dist = point_to_plane(point=pos, plane=lin_constrs)
+                    ineqs.append(dist - r_body)
         return ineqs

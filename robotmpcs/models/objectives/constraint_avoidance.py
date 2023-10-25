@@ -20,13 +20,13 @@ class ConstraintAvoidance(MpcBase):
 
 
     def eval_objective(self, z, p):
-
         w = p[self._paramMap["wconstr"]]
         Jconstr = 0
         for i,ineq_module in enumerate(self._ineq_modules):
-            ineq = ineq_module.eval_constraint(z, p)
-            if len(ineq)>0:
-                Wi = diagSX(w[i], ineq[0].shape[0])
-                Jconstr += Wi * 1 / ineq[0]
+            for j in range(self._N):
+                ineq = ineq_module.eval_constraint(z, p)
+                if len(ineq)>0:
+                    Wi = diagSX(w[i], ineq[0].shape[0])
+                    Jconstr += Wi * 1 / ineq[0]
 
         return Jconstr

@@ -10,14 +10,19 @@ from mpscenes.goals.goal_composition import GoalComposition
 from urdfenvs.urdf_common.urdf_env import UrdfEnv
 from mpc_example import MpcExample
 from robotmpcs.utils.free_space_decomposition import FreeSpaceDecomposition
-from robotmpcs.utils.utils import visualize_constraints_in_pybullet
+from robotmpcs.utils.utils import visualize_constraints_in_pybullet, visualize_constraints_over_N_in_pybullet
 
 
 class BoxerMpcExample(MpcExample):
 
     def __init__(self, config_file_name: str):
         super().__init__(config_file_name)
-        self._fsd = FreeSpaceDecomposition(number_constraints=5, max_radius=5)
+
+        self._N = self._config['mpc']['time_horizon']
+        self._n_obstacles = self._config['mpc']['number_obstacles']
+
+        self._fsd = FreeSpaceDecomposition(number_constraints=self._n_obstacles, max_radius=5)
+
 
     def initialize_environment(self):
 
@@ -64,7 +69,7 @@ class BoxerMpcExample(MpcExample):
                 [-10, 10],
         ])
 
-        self._lin_constr = [np.array([1, 0, 0, -1.5])]
+        self._lin_constr = self._N*[self._n_obstacles * [np.array([1, 0, 0, -100])]]
         current_path = os.path.dirname(os.path.abspath(__file__))
 
         self._env: UrdfEnv = gym.make(
@@ -76,7 +81,7 @@ class BoxerMpcExample(MpcExample):
         for i in range(self._config['mpc']['time_horizon']):
             self._env.add_visualization(size=[self._r_body, 0.1])
 
-    def compute_constraints(self, robot_state: np.ndarray, lidar_obs: np.ndarray) -> List:
+    def compute_constraints(self, robot_state: np.ndarray, ref_state: np.ndarray, lidar_obs: np.ndarray) -> List:
         angle = robot_state[2]
         rot_matrix = np.array([
                 [np.cos(angle), -np.sin(angle)], 
@@ -98,6 +103,15 @@ class BoxerMpcExample(MpcExample):
             lidar_position[np.newaxis, :], number_rays, axis=0
         )
 
+        angle = ref_state[2]
+        rot_matrix = np.array([
+                [np.cos(angle), -np.sin(angle)],
+                [np.sin(angle), np.cos(angle)],
+        ])
+
+        position_lidar = np.dot(rot_matrix, np.array([0.4, 0.0])) + ref_state[0:2]
+        lidar_position = np.array([position_lidar[0], position_lidar[1], 0.02])
+
         self._fsd.set_position(lidar_position)
         self._fsd.compute_constraints(absolute_positions)
         return list(self._fsd.asdict().values())
@@ -117,23 +131,39 @@ class BoxerMpcExample(MpcExample):
         self._env.add_sensor(lidar, [0])
         self._env.set_spaces()
 
+
+
         q0 = np.median(self._limits, axis = 1)
         ob, *_ = self._env.reset(pos=q0)
+
         for obstacle in self._obstacles:
             self._env.add_obstacle(obstacle)
         self._env.add_goal(self._goal)
 
+        ob, *_ = self._env.step(np.array([0.0,0.0]))
+
+
         n_steps = 1000
+        exitflag = 0
         for _ in range(n_steps):
             q = ob['robot_0']['joint_state']['position']
             qdot = ob['robot_0']['joint_state']['velocity']
             vel = np.array((ob['robot_0']['joint_state']['forward_velocity'], qdot[2]), dtype=float)
             lidar_obs = ob['robot_0']['LidarSensor']
 
-            linear_constraints = self.compute_constraints(q, lidar_obs)
+            linear_constraints = []
+            halfplanes = []
+            for j in range(self._N):
+                if exitflag < 0 or _ == 0:
+                    ref_q = q
+                else:
+                    key = "x{:02d}".format(j+1)
+                    ref_q = output[key]
+                linear_constraints.append(self.compute_constraints(q,ref_q, lidar_obs))
+                halfplanes.append(self._fsd._constraints)
 
             self._planner.setLinearConstraints(linear_constraints, r_body=self._r_body)
-            action,output = self._planner.computeAction(q, qdot, vel)
+            action,output, exitflag = self._planner.computeAction(q, qdot, vel)
             plan = []
             for key in output:
                 plan.append(np.concatenate([output[key][:2],np.zeros(1)]))
@@ -141,7 +171,8 @@ class BoxerMpcExample(MpcExample):
             if self.check_goal_reaching(ob):
                 print("goal reached")
                 break
-            visualize_constraints_in_pybullet(self._fsd, 0.02)
+            #visualize_constraints_in_pybullet(self._fsd, 0.02)
+            visualize_constraints_over_N_in_pybullet(halfplanes, 0.02)
             self._env.update_visualizations(plan)
 
     def check_goal_reaching(self, ob):

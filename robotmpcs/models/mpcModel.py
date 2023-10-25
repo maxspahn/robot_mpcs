@@ -75,11 +75,12 @@ class MpcModel(MpcBase):
         self._model = forcespro.nlp.SymbolicModel(self._N)
         self._model.continuous_dynamics = self.continuous_dynamics
 
+        self._model.ineq = self._inequality_manager.eval_inequalities
 
         self._model.nh = self.number_inequalities
         self._model.hu = np.ones(self.number_inequalities) * np.inf
         self._model.hl = np.zeros(self.number_inequalities)
-        self._model.ineq = self._inequality_manager.eval_inequalities
+
 
         self._model.objective = self._objective_manager.eval_objectives
         self._model.objectiveN = self._objective_manager.eval_objectiveN

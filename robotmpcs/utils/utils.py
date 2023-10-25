@@ -16,6 +16,19 @@ def visualize_constraints_in_pybullet(fsd, height):
         end_point = (plot_point[0, 1], plot_point[-1, 1], height)
         pybullet.addUserDebugLine(start_point, end_point)
 
+def visualize_constraints_over_N_in_pybullet(halfplanes, height):
+    import pybullet
+    plot_points = []
+    if len(halfplanes)>0:
+        for constraint in halfplanes:
+            if len(constraint) >0:
+                plot_points.append(constraint[0].get_points())
+        pybullet.removeAllUserDebugItems()
+        for plot_point in plot_points:
+            start_point = (plot_point[0, 0], plot_point[-1, 0], height)
+            end_point = (plot_point[0, 1], plot_point[-1, 1], height)
+            pybullet.addUserDebugLine(start_point, end_point)
+
 def diagSX(val, size):
     a = ca.SX(size, size)
     for i in range(size):
