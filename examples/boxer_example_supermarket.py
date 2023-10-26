@@ -44,6 +44,11 @@ class BoxerMpcExample(MpcExample):
         }
         self._goal = GoalComposition(name="goal1", content_dict=goal_dict)
         obst1Dict = {
+            "type": "sphere",
+            "geometry": {"position": [4.0, -1.5, 0.0], "radius": 1.0},
+        }
+        sphereObst1 = SphereObstacle(name="simpleSphere", content_dict=obst1Dict)
+        obst1Dict = {
             "type": "box",
             "geometry": {"position": [3.0, 2.0, 0.0],
                          "length": 10.0,
@@ -78,16 +83,12 @@ class BoxerMpcExample(MpcExample):
                          "width": 5.0,
                          "height": 1.0},
         }
-        # obst2Dict = {
-        #     "type": "sphere",
-        #     "geometry": {"position": [4.0, -1.5, 0.0], "radius": [1.0, 1.0, 1.0]},
-        # }
         boxObst1 = BoxObstacle(name="shelve1", content_dict=obst1Dict)
         boxObst2 = BoxObstacle(name="shelve2", content_dict=obst2Dict)
         boxObst3 = BoxObstacle(name="shelve3", content_dict=obst3Dict)
         boxObst4 = BoxObstacle(name="shelve4", content_dict=obst4Dict)
         boxObst5 = BoxObstacle(name="shelve5", content_dict=obst5Dict)
-        self._obstacles = [boxObst1, boxObst2, boxObst3, boxObst4, boxObst5]
+        self._obstacles = [sphereObst1, boxObst1, boxObst2, boxObst3, boxObst4, boxObst5]
         self._r_body = 0.6
         self._limits = np.array([
                 [-10, 10],
@@ -136,8 +137,9 @@ class BoxerMpcExample(MpcExample):
                                                      limits_low = sensor._limits.transpose()[0],
                                                      limits_high = sensor._limits.transpose()[1],
                                                      BOOL_PLOTTING=True)
+        global_path = []
 
-        n_steps = 10
+        n_steps = 1000
         for w in range(n_steps):
             q = ob['robot_0']['joint_state']['position']
             qdot = ob['robot_0']['joint_state']['velocity']
@@ -148,19 +150,18 @@ class BoxerMpcExample(MpcExample):
                 goal_pos = self._goal._config.subgoal0.desired_position + [0]
                 global_path, _ = global_planner.get_global_path_astar(start_pos=q, goal_pos=goal_pos)
                 global_planner.add_path_to_env(path_length=len(global_path), env=self._env)
-                # global_planner.update_path_in_env(path=global_path, env=self._env)
 
-            # vel = np.array((ob['robot_0']['joint_state']['forward_velocity'], qdot[2]), dtype=float)
-            # action,output = self._planner.computeAction(q, qdot, vel)
-            # plan = []
-            # for key in output:
-            #     plan.append(np.concatenate([output[key][:2],np.zeros(1)]))
+            vel = np.array((ob['robot_0']['joint_state']['forward_velocity'], qdot[2]), dtype=float)
+            action,output = self._planner.computeAction(q, qdot, vel)
+            plan = []
+            for key in output:
+                plan.append(np.concatenate([output[key][:2],np.zeros(1)]))
             action = np.zeros(3)
             ob, *_ = self._env.step(action)
-            # if self.check_goal_reaching(ob):
-            #     print("goal reached")
-            #     break
-            # self._env.update_visualizations(plan)
+            if self.check_goal_reaching(ob):
+                print("goal reached")
+                break
+            self._env.update_visualizations(plan+global_path)
         # global_planner.plot_occupancy_map()
 
     def check_goal_reaching(self, ob):
@@ -175,7 +176,7 @@ def main():
     sys.argv.append("config/boxerMpc.yaml")
     boxer_example = BoxerMpcExample(sys.argv[1])
     boxer_example.initialize_environment()
-    # boxer_example.set_mpc_parameter()
+    boxer_example.set_mpc_parameter()
     boxer_example.run()
 
 

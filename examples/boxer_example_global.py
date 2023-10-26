@@ -9,7 +9,7 @@ from mpscenes.goals.goal_composition import GoalComposition
 from urdfenvs.urdf_common.urdf_env import UrdfEnv
 from mpc_example import MpcExample
 from robotmpcs.planner.visualizer import Visualizer
-from robotmpcs.planner import globalPlanner
+from robotmpcs.global_planner import globalPlanner
 
 class BoxerMpcExample(MpcExample):
 
@@ -82,7 +82,7 @@ class BoxerMpcExample(MpcExample):
         # add sensor
         val = 40
         sensor = OccupancySensor(
-            limits=np.array([[-5, 5], [-5, 5], [0, 50 / val]]),
+            limits=np.array([[-5, 10], [-5, 10], [0, 50 / val]]),
             resolution=np.array([val + 1, val + 1, 5], dtype=int),
             interval=100,
             plotting_interval=100,
@@ -91,13 +91,25 @@ class BoxerMpcExample(MpcExample):
         self._env.add_sensor(sensor, [0])
         self._env.set_spaces()
 
-        global_planner = globalPlanner.GlobalPlanner()
+        global_planner = globalPlanner.GlobalPlanner(dim_pixels = sensor._resolution,
+                                                     limits_low = sensor._limits.transpose()[0],
+                                                     limits_high = sensor._limits.transpose()[1],
+                                                     BOOL_PLOTTING=True)
+        global_path = []
 
         n_steps = 1000
-        for _ in range(n_steps):
+        for w in range(n_steps):
             q = ob['robot_0']['joint_state']['position']
             qdot = ob['robot_0']['joint_state']['velocity']
             vel = np.array((ob['robot_0']['joint_state']['forward_velocity'], qdot[2]), dtype=float)
+
+            #at first step: compute global path:
+            if w == 1:
+                global_planner.get_occupancy_map(sensor)
+                goal_pos = self._goal._config.subgoal0.desired_position + [0]
+                global_path, _ = global_planner.get_global_path_astar(start_pos=q, goal_pos=goal_pos)
+                global_planner.add_path_to_env(path_length=len(global_path), env=self._env)
+
             action,output = self._planner.computeAction(q, qdot, vel)
             plan = []
             for key in output:
@@ -106,9 +118,7 @@ class BoxerMpcExample(MpcExample):
             if self.check_goal_reaching(ob):
                 print("goal reached")
                 break
-            self._env.update_visualizations(plan)
-            global_planner.get_occupancy_map(sensor)
-        global_planner.plot_occupancy_map()
+            self._env.update_visualizations(plan+global_path)
 
     def check_goal_reaching(self, ob):
         primary_goal = self._goal.primary_goal()

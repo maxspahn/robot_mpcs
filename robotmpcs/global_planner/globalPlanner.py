@@ -4,12 +4,13 @@ from robotmpcs.global_planner.a_star import a_star
 from robotmpcs.global_planner.gridmap import OccupancyGridMap
 
 class GlobalPlanner(object):
-    def __init__(self, dim_pixels, limits_low, limits_high, BOOL_PLOTTING=True):
+    def __init__(self, dim_pixels, limits_low, limits_high, BOOL_PLOTTING=True, threshold=0.2):
         self.dim_pixels = dim_pixels
         self.limits_high = limits_high
         self.limits_low = limits_low
         self.dim_meters = -limits_low + limits_high
         self.cell_size_xyz = self.dim_meters/dim_pixels
+        self.threshold = threshold
 
         # dimension of cell must be the same in x and y direction:
         if self.cell_size_xyz[0] == self.cell_size_xyz[1]:
@@ -22,7 +23,7 @@ class GlobalPlanner(object):
 
     def get_occupancy_map(self, sensor):
         occupancy_map_3D = sensor._grid_values
-        self.occupancy_map_2D = np.sum(occupancy_map_3D, axis=2)
+        self.occupancy_map_2D = np.clip(np.sum(occupancy_map_3D, axis=2), 0, self.threshold)
         plt.imsave('occupancy_map.png', self.occupancy_map_2D)
         return sensor
 
@@ -56,27 +57,6 @@ class GlobalPlanner(object):
         plt.grid(True)
         plt.show()
 
-    # def convert_meters_to_pixels(self, pos_meters):
-    #     pos_pixels = np.round((pos_meters)/self.cell_size_xyz - self.limits.transpose()[0]/self.cell_size_xyz, decimals=0)
-    #
-    #     # make sure it is not out of the high bounds of the map:
-    #     bool_high_bound = pos_pixels>self.dim_pixels
-    #     first_index_high = np.where(bool_high_bound==True)
-    #     if np.any(bool_high_bound):
-    #         for i in range(first_index_high, len(pos_pixels)):
-    #             pos_pixels[i] = self.dim_pixels[i]
-    #             print("outside of map, corrected!")
-    #
-    #     # make sure it is not out of the low bounds of the map
-    #     bool_low_bound = pos_pixels>self.dim_pixels
-    #     first_index_low = np.where(bool_high_bound==True)
-    #     if np.any(bool_low_bound):
-    #         for i in range(first_index_low, len(pos_pixels)):
-    #             pos_pixels[i] = self.dim_pixels[i]
-    #             print("outside of map, corrected!")
-    #
-    #     return pos_pixels
-
     def convert_meters(self, pos_meters):
         """
         For the Astar, you would like to have all xy-coordinates positive and in the frame of the image.
@@ -93,8 +73,8 @@ class GlobalPlanner(object):
         """
         if len(pos_meters) == 2:
             pos_meters = pos_meters + (0.0,)
-        pos_meters_update = pos_meters + self.limits_low
-        pos_meters_updated = [pos_meters_update[0], self.dim_meters[0] - pos_meters_update[1], pos_meters[2]]
+        pos_meters_update = [self.dim_meters[1] - pos_meters[1], pos_meters[0], pos_meters[2]]
+        pos_meters_updated = pos_meters_update + self.limits_low
 
         return pos_meters_updated
 
@@ -111,16 +91,7 @@ class GlobalPlanner(object):
         """
         for _ in range(path_length):
             env.add_visualization(size=[0.1, 0.1],
-                                  rgba_color=[1.0, 1.0, 1.0, 0.3])
-
-    def update_path_in_env(self, path, env):
-        """
-        Update positions of path shapes
-        """
-        # for position in path:
-        env.update_visualizations(positions=path)
-
-
+                                  rgba_color=[0.0, 1.0, 1.0, 0.3])
 
     def get_global_path_astar(self, start_pos, goal_pos):
         # load the map
@@ -142,6 +113,5 @@ class GlobalPlanner(object):
         #plot path if BOOL is satisfied:
         if self.BOOL_PLOTTING == 1:
             self.plot_occupancy_map_and_path(path=path_px, gmap=gmap, start_pos=start_pos, goal_pos=goal_pos)
-
         path_converted = self.convert_path(path)
         return path_converted, path_px
