@@ -4,8 +4,6 @@ from dataclasses import dataclass
 from forwardkinematics.fksCommon.fk import ForwardKinematics
 from forwardkinematics.urdfFks.generic_urdf_fk import GenericURDFFk
 import numpy as np
-from robotmpcs.helpers import load_forces_path
-load_forces_path()
 import forcespro
 import yaml
 from shutil import move, rmtree
