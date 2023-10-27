@@ -16,6 +16,8 @@ forwardkinematics = "^1.1.1"
 setuptools = "^67.5.1"
 numpy = "<1.23"
 urdfenvs = {git = "https://github.com/maxspahn/gym_envs_urdf.git", rev = "develop", optional=true}
+matplotlib = "3.7"
+pypng = "^0.20220715.0"
 
 
 [tool.poetry.dev-dependencies]
