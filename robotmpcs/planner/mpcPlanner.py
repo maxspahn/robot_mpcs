@@ -1,6 +1,7 @@
 import numpy as np
 import yaml
 import os
+import forcespro
 from robotmpcs.models.mpcBase import MpcConfiguration
 
 

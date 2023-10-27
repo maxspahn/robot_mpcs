@@ -110,6 +110,9 @@ class BoxerMpcExample(MpcExample):
                 global_path, _ = global_planner.get_global_path_astar(start_pos=q, goal_pos=goal_pos)
                 global_planner.add_path_to_env(path_length=len(global_path), env=self._env)
 
+            # if len(global_path)>0:
+            #     self._goal._config.subgoal0.desired_position = list(global_path[-1][0:2])
+            #     self._planner.setGoal(goal=self._goal)#global_path[-1])
             action,output = self._planner.computeAction(q, qdot, vel)
             plan = []
             for key in output:
