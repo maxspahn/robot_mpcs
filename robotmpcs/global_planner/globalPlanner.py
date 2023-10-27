@@ -5,7 +5,7 @@ from robotmpcs.global_planner.a_star import a_star
 from robotmpcs.global_planner.gridmap import OccupancyGridMap
 
 class GlobalPlanner(object):
-    def __init__(self, dim_pixels, limits_low, limits_high, BOOL_PLOTTING=True, threshold=0.2, enlarge_obstacles=True):
+    def __init__(self, dim_pixels, limits_low, limits_high, BOOL_PLOTTING=True, threshold=0.2, convolution_blur = (5, 5), enlarge_obstacles=True):
         self.dim_pixels = dim_pixels
         self.limits_high = limits_high
         self.limits_low = limits_low
@@ -13,6 +13,7 @@ class GlobalPlanner(object):
         self.cell_size_xyz = self.dim_meters/dim_pixels
         self.threshold = threshold
         self.enlarge_obstacles = enlarge_obstacles
+        self.convolution_blur = convolution_blur
 
         # dimension of cell must be the same in x and y direction:
         if self.cell_size_xyz[0] == self.cell_size_xyz[1]:
@@ -34,7 +35,7 @@ class GlobalPlanner(object):
         be ware that for images the max value is 255
         """
         img = cv.imread('occupancy_map.png', cv.IMREAD_GRAYSCALE)
-        img_blurred = cv.blur(img, (5, 5))  #todo: only need opencv for this, could be written by convolution
+        img_blurred = cv.blur(img, self.convolution_blur)  #todo: only need opencv for this, could be written by convolution
 
         image_enlarged_obst = np.clip(img_blurred/255, 0, self.threshold)
         plt.imsave('occupancy_map_enlarged.png', image_enlarged_obst)
