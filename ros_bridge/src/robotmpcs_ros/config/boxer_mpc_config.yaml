@@ -6,21 +6,18 @@ mpc:
   time_step: 0.1
   slack: False
   interval: 1
-  initialization: "previous_plan"
-  constraints: [ 'LinearConstraints',
-                 'SelfCollisionAvoidanceConstraints',
-                 'JointLimitConstraints',
-                 'InputLimitConstraints' ]
-  objectives:
-    - 'GoalReaching'
-    - 'ConstraintAvoidance'
+  initialization: previous_plan
+  constraints:
+    - RadialConstraints
+    - SelfCollisionAvoidanceConstraints
+    - JointLimitConstraints
+    - InputLimitConstraints
   weights:
     w: 1.0
     wvel: [0.0, 0.0, 0.0, 1, 0.01]
     ws: 1e10
     wu: 0.01
     wobst: 0.5
-    wconstr: [0.0, 0.0, 0.0, 0.0]
   number_obstacles: 1
   control_mode: "acc"
 robot:
@@ -32,5 +29,3 @@ robot:
   root_link: base_link
   end_link: ee_link
   base_type: diffdrive
-example:
-  debug: False

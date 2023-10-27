@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <!-- Load the YAML file into the parameter server -->
+  <rosparam file="$(find robotmpcs_ros)/config/boxer_mpc_config.yaml" command="load"/>
+  <node pkg="robotmpcs_ros" type="mpc_planner_node" name="mpc_planner_node" output="screen"/>
+
+
+</launch>
+

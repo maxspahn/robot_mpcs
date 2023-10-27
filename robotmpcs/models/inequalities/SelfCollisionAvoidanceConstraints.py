@@ -5,15 +5,15 @@ class SelfCollisionAvoidanceConstraints(MpcBase):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-
+        self._n_ineq = len(self._robot_config.selfCollision['pairs'])
 
     def set_parameters(self, ParamMap, npar):
         self._paramMap = ParamMap
         self._npar = npar
-        return self._paramMap, self._npar
 
-    def get_number_ineq(self):
-        return len(self._robot_config.selfCollision['pairs'])
+        self.addEntry2ParamMap("r_body", 1)
+
+        return self._paramMap, self._npar
 
     def eval_constraint(self, z, p):
         q, *_ = self.extractVariables(z)

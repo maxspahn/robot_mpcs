@@ -4,6 +4,8 @@ class InputLimitConstraints(MpcBase):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        self._n_ineq = self._nu * 2
+
     def set_parameters(self, ParamMap, npar):
         self._paramMap = ParamMap
         self._npar = npar
@@ -12,8 +14,6 @@ class InputLimitConstraints(MpcBase):
         self.addEntry2ParamMap("upper_limits_u", self._nu)
         return self._paramMap, self._npar
 
-    def get_number_ineq(self):
-        return self._nu * 2
 
     def eval_constraint(self, z, p):
         # Parameters in state boundaries?
