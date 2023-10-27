@@ -224,6 +224,7 @@ class BoxerMpcExample(MpcExample):
         return False
 
 def main():
+    # sys.argv.append("/config/boxerMpc.yaml")
     boxer_example = BoxerMpcExample(sys.argv[1])
     boxer_example.initialize_environment()
     boxer_example.set_mpc_parameter()

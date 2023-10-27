@@ -1,16 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import cv2 as cv #imaging processing toolbox
 from robotmpcs.global_planner.a_star import a_star
 from robotmpcs.global_planner.gridmap import OccupancyGridMap
 
 class GlobalPlanner(object):
-    def __init__(self, dim_pixels, limits_low, limits_high, BOOL_PLOTTING=True, threshold=0.2):
+    def __init__(self, dim_pixels, limits_low, limits_high, BOOL_PLOTTING=True, threshold=0.2, enlarge_obstacles=True):
         self.dim_pixels = dim_pixels
         self.limits_high = limits_high
         self.limits_low = limits_low
         self.dim_meters = -limits_low + limits_high
         self.cell_size_xyz = self.dim_meters/dim_pixels
         self.threshold = threshold
+        self.enlarge_obstacles = enlarge_obstacles
 
         # dimension of cell must be the same in x and y direction:
         if self.cell_size_xyz[0] == self.cell_size_xyz[1]:
@@ -25,6 +27,19 @@ class GlobalPlanner(object):
         self.occupancy_map_2D = np.clip(np.sum(occupancy_map_3D, axis=2), 0, self.threshold)
         plt.imsave('occupancy_map.png', self.occupancy_map_2D)
         return sensor
+
+    def get_enlarged_obstacles(self):
+        """
+        Blurs image to get enlarged obstacles
+        be ware that for images the max value is 255
+        """
+        img = cv.imread('occupancy_map.png', cv.IMREAD_GRAYSCALE)
+        img_blurred = cv.blur(img, (5, 5))  #todo: only need opencv for this, could be written by convolution
+
+        image_enlarged_obst = np.clip(img_blurred/255, 0, self.threshold)
+        plt.imsave('occupancy_map_enlarged.png', image_enlarged_obst)
+
+
 
     def plot_occupancy_map(self):
         """
@@ -93,8 +108,12 @@ class GlobalPlanner(object):
                                   rgba_color=[0.0, 1.0, 1.0, 0.3])
 
     def get_global_path_astar(self, start_pos, goal_pos):
+        # enlarge obstacles in the map to fill gaps where the robot would not fit:
+        if self.enlarge_obstacles == True:
+            self.get_enlarged_obstacles()
+
         # load the map
-        gmap = OccupancyGridMap.from_png('occupancy_map.png', cell_size=self.cell_size)
+        gmap = OccupancyGridMap.from_png('occupancy_map_enlarged.png', cell_size=self.cell_size)
 
         # convert coordinates to make sure all (x, y) coordinates are positive and correct wrt the gmap:
         start_pos = self.convert_meters(start_pos)

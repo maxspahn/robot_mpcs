@@ -16,6 +16,7 @@ mpc:
     - 'ConstraintAvoidance'
   weights:
     w: 1.0
+    wgoal: 1.0
     wvel: [0.0, 0.0, 0.0, 1, 0.01]
     ws: 1e10
     wu: 0.01
