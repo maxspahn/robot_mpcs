@@ -1,9 +1,6 @@
 import numpy as np
 import yaml
 import os
-from robotmpcs.helpers import load_forces_path
-load_forces_path()
-import forcespro
 from robotmpcs.models.mpcBase import MpcConfiguration
 
 
