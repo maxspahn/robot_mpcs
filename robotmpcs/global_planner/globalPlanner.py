@@ -21,8 +21,7 @@ class GlobalPlanner(object):
 
         self.BOOL_PLOTTING = BOOL_PLOTTING
 
-    def get_occupancy_map(self, sensor):
-        occupancy_map_3D = sensor._grid_values
+    def get_occupancy_map(self, sensor, occupancy_map_3D):
         self.occupancy_map_2D = np.clip(np.sum(occupancy_map_3D, axis=2), 0, self.threshold)
         plt.imsave('occupancy_map.png', self.occupancy_map_2D)
         return sensor
