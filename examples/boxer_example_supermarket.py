@@ -224,12 +224,17 @@ class BoxerMpcExample(MpcExample):
             lidar_obs = ob['robot_0']['LidarSensor']
             point_cloud = self.compute_point_cloud(q, lidar_obs)
 
+            # Plan global path:
             if i == 0:
                 global_planner.get_occupancy_map(occ_sensor, ob['robot_0']['Occupancy'])
                 goal_pos = self._goal._config.subgoal0.desired_position + [0]
                 global_path, _ = global_planner.get_global_path_astar(start_pos=q, goal_pos=goal_pos)
                 global_planner.add_path_to_env(path_length=len(global_path), env=self._env)
 
+            # Get the local goal on the global path that the agent has to track:
+            if len(global_path)>0:
+                local_goal = global_planner.get_local_goal(q[0:2], global_path)
+                self._planner.setGoalReaching(goal_position=local_goal)
 
             # ---START: Preprocessing for planner---
             # This part is the preprocessing of perception for the planner.
