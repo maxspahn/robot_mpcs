@@ -12,6 +12,7 @@ class MpcConfiguration:
     slack: bool
     interval: int
     constraints: list
+    objectives: list
     number_obstacles: int
     model_name: str
     initialization: str
@@ -37,6 +38,7 @@ class MpcBase(object):
 
     def __init__(self, **kwargs):
         self._config = MpcConfiguration(**kwargs['mpc'])
+        self._debug = kwargs['example']['debug']
         self._robot_config = RobotConfiguration(**kwargs['robot'])
         with open(self._robot_config.urdf_file, 'r') as f:
             urdf = f.read()
@@ -63,11 +65,10 @@ class MpcBase(object):
         self._pairs = []
         self._N = self._config.time_horizon
 
-
-
     def addEntry2ParamMap(self, name, n_par):
-        self._paramMap[name] = list(range(self._npar, self._npar + n_par))
-        self._npar += n_par
+        if name not in self._paramMap:
+            self._paramMap[name] = list(range(self._npar, self._npar + n_par))
+            self._npar += n_par
 
     def get_velocity(self, z):
         return  z[self._n: self._nx]

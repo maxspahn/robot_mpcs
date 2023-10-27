@@ -7,16 +7,21 @@ mpc:
   slack: False
   interval: 1
   initialization: "current_state"
-  constraints: ['RadialConstraints',
-                'SelfCollisionAvoidanceConstraints',
-                'JointLimitConstraints',
-                'InputLimitConstraints']
+  constraints:
+    - 'RadialConstraints'
+    - 'SelfCollisionAvoidanceConstraints'
+    - 'JointLimitConstraints'
+    - 'InputLimitConstraints'
+  objectives:
+    - 'GoalReaching'
+    - 'ConstraintAvoidance'
   weights:
     w: 3.0
     wvel: [1.0, 1.0, 1.0 ,1.0, 1.0, 1.0, 1.0]
     ws: 1e10
     wu: 0.1
     wobst: 0.01
+    wconstr: [0.5, 0.0, 0.0, 0.0]
   number_obstacles: 1
 
   control_mode: "acc"
@@ -34,3 +39,5 @@ robot:
   root_link: panda_link0
   end_link: panda_link7
   base_type: holonomic
+example:
+  debug: False

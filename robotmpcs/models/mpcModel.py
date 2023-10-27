@@ -11,6 +11,7 @@ from glob import glob
 from robotmpcs.models.mpcBase import MpcBase
 from robotmpcs.models.objectives.goal_mpc_objective import GoalMpcObjective
 from robotmpcs.models.inequalities.InequalityManager import InequalityManager
+from robotmpcs.models.objectives.ObjectiveManager import ObjectiveManager
 
 class MpcModel(MpcBase):
     def __init__(self, initParamMap=True, **kwargs):
@@ -27,6 +28,13 @@ class MpcModel(MpcBase):
             self.initParamMap()
         self._inequality_manager = InequalityManager(self._paramMap, self._npar, **kwargs)
         self._paramMap, self._npar = self._inequality_manager.set_constraints()
+        self.number_inequalities = 0
+        for ineq_module in self._inequality_manager.inequality_modules:
+            self.number_inequalities += ineq_module._n_ineq
+
+        self._objective_manager = ObjectiveManager(self._paramMap, self._npar, self._inequality_manager.inequality_modules, **kwargs)
+        self._paramMap, self._npar = self._objective_manager.set_objectives()
+
 
 
     def initParamMap(self):
@@ -35,18 +43,9 @@ class MpcModel(MpcBase):
 
 
 
-        self.addEntry2ParamMap("r_body", 1)
-
-
-
-        self.setObstacles()
 
     def setSelfCollisionAvoidance(self, pairs):
         self._pairs = pairs
-
-    def setObstacles(self):
-        self.addEntry2ParamMap("obst", 4 * self._config.number_obstacles)
-        self.addEntry2ParamMap('wobst', 1)
 
 
     def eval_selfCollision(self, z, p):
@@ -73,12 +72,18 @@ class MpcModel(MpcBase):
         self._dt = dt
 
     def setModel(self):
-        self.objective = GoalMpcObjective(**self._kwargs)
-        self._paramMap, self._npar = self.objective.set_parameters(self._paramMap, self._npar)
         self._model = forcespro.nlp.SymbolicModel(self._N)
         self._model.continuous_dynamics = self.continuous_dynamics
-        self._model.objective = self.objective.eval_objective
-        self._model.objectiveN = self.objective.eval_objectiveN
+
+        self._model.ineq = self._inequality_manager.eval_inequalities
+
+        self._model.nh = self.number_inequalities
+        self._model.hu = np.ones(self.number_inequalities) * np.inf
+        self._model.hl = np.zeros(self.number_inequalities)
+
+
+        self._model.objective = self._objective_manager.eval_objectives
+        self._model.objectiveN = self._objective_manager.eval_objectiveN
         E = np.concatenate(
             [np.eye(self._nx), np.zeros((self._nx, self._nu + self._ns))], axis=1
         )
@@ -100,13 +105,6 @@ class MpcModel(MpcBase):
         self._model.npar = self._npar
         self._model.nvar = self._nx + self._nu + self._ns
         self._model.neq = self._nx
-        number_inequalities = 0
-        for ineq_module in self._inequality_manager.inequality_modules:
-            number_inequalities += ineq_module.get_number_ineq()
-        self._model.nh = number_inequalities
-        self._model.hu = np.ones(number_inequalities) * np.inf
-        self._model.hl = np.zeros(number_inequalities)
-        self._model.ineq = self._inequality_manager.eval_inequalities
         self._model.xinitidx = range(0, self._nx)
 
     def setCodeoptions(self, **kwargs):
@@ -128,9 +126,9 @@ class MpcModel(MpcBase):
             self._codeoptions.optlevel = 3
 
     def generateSolver(self, location="./"):
-        if self._config.debug:
-            location += 'debug/'
         _ = self._model.generate_solver(self._codeoptions)
+        if self._debug:
+            location += 'debug/'
         with open(self._solverName + '/paramMap.yaml', 'w') as outfile:
             yaml.dump(self._paramMap, outfile, default_flow_style=False)
         properties = {"nx": self._nx, "nu": self._nu, "npar": self._npar, "ns": self._ns, "m": self._m, "constraints": self._inequality_manager.inequality_modules_strs}

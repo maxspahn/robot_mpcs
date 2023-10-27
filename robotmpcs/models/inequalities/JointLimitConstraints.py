@@ -5,7 +5,7 @@ class JointLimitConstraints(MpcBase):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-
+        self._n_ineq = self._n * 2
 
     def set_parameters(self, ParamMap, npar):
         self._paramMap = ParamMap
@@ -16,8 +16,6 @@ class JointLimitConstraints(MpcBase):
 
         return self._paramMap, self._npar
 
-    def get_number_ineq(self):
-        return self._n*2
 
     def eval_constraint(self, z, p):
         # Parameters in state boundaries?
