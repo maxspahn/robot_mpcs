@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+  <node pkg="ira_laser_tools" name="laserscan_multi_merger" type="laserscan_multi_merger">
+    <param name="destination_frame" value="front_laser"/>
+    <param name="scan_destination_topic" value="/scan"/>
+    <param name="laserscan_topics" value ="/front/scan /rear/scan" />
+  </node>
+
+</launch>

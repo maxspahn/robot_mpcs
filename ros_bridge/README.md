@@ -19,6 +19,7 @@ Install `robot_mpcs` globally (or in the virtual environment if you use ros insi
 ```bash
 pip install -e .
 ```
+ira_laser_tools
 
 Build catkin workspace
 ```bash

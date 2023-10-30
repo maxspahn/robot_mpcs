@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-from typing import Union
+from typing import Union, Tuple,List
 import numpy as np
 from std_msgs.msg import Float64MultiArray
+from sensor_msgs.msg import PointCloud2
 import rospkg
+import sys
 import rospy
+import sensor_msgs.point_cloud2 as pc2
 from geometry_msgs.msg import Pose, Twist
 from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import Odometry
 from robotmpcs.planner.mpcPlanner import MPCPlanner
 from mpscenes.goals.goal_composition import GoalComposition
 from mpscenes.obstacles.sphere_obstacle import SphereObstacle
+from robotmpcs.utils.free_space_decomposition import FreeSpaceDecomposition
 
 def get_rotation(pose: Pose) -> float:
     orientation_q = pose.orientation
@@ -40,6 +44,7 @@ class MPCNode():
 
     def init_scenario(self):
         self._goal = None
+        self._lidar_pointcloud = None
         obst1Dict = {
             "type": "sphere",
             "geometry": {"position": [400.0, -1.5, 0.0], "radius": 1.0},
@@ -69,6 +74,9 @@ class MPCNode():
         rospack = rospkg.RosPack()
         self._solver_directory = rospack.get_path("robotmpcs_ros") + "/solvers/"
         self._config = rospy.get_param('/mpc')
+        self._N = self._config['time_horizon']
+        self._n_obstacles = self._config['number_obstacles']
+        self._fsd = FreeSpaceDecomposition(number_constraints=self._n_obstacles, max_radius=5)
         self._planner = MPCPlanner(
             self._robot_type,
             self._solver_directory,
@@ -77,13 +85,57 @@ class MPCNode():
         self._planner.reset()
 
     def set_mpc_parameter(self):
-        self._planner.setObstacles(self._obstacles, self._r_body)
-        if hasattr(self, '_limits'):#todo also check if they were included in solver
-            self._planner.setJointLimits(np.transpose(self._limits))
-        if hasattr(self, '_limits_vel'):
-            self._planner.setVelLimits(np.transpose(self._limits_vel))
-        if hasattr(self, '_limits_u'):
-            self._planner.setInputLimits(np.transpose(self._limits_u))
+        constraints = self._config['constraints']
+        objectives = self._config['objectives']
+
+        for objective in objectives:
+            if objective == 'GoalReaching':
+                try:
+                    self._planner.setGoalReaching(self._goal)
+                except AttributeError:
+                    print('The required attributes for setting ' + objective + ' are not defined')
+            elif objective == 'ConstraintAvoidance':
+                try:
+                    self._planner.setConstraintAvoidance()
+                except KeyError:
+                    print('The required attributes for setting ' + objective + ' are not defined in the config file')
+            else:
+                print('No function to set the parameters for this objective is defined')
+
+
+        for constraint in constraints:
+            if constraint == 'JointLimitConstraints':
+                try:
+                    self._planner.setJointLimits(np.transpose(self._limits))
+                except AttributeError:
+                    print('The required attributes for setting ' + constraint + ' are not defined')
+            elif constraint == 'VelLimitConstraints':
+                try:
+                    self._planner.setVelLimits(np.transpose(self._limits_vel))
+                except AttributeError:
+                    print('The required attributes for setting ' + constraint + ' are not defined')
+            elif constraint == 'InputLimitConstraints':
+                try:
+                    self._planner.setInputLimits(np.transpose(self._limits_u))
+                except AttributeError:
+                    print('The required attributes for setting ' + constraint + ' are not defined')
+            elif constraint == 'LinearConstraints':
+                try:
+                    self._planner.setLinearConstraints(self._lin_constr, self._r_body)
+                except AttributeError:
+                    print('The required attributes for setting ' + constraint + ' are not defined')
+            elif constraint == 'RadialConstraints':
+                try:
+                    self._planner.setRadialConstraints(self._obstacles, self._r_body)
+                except AttributeError:
+                    print('The required attributes for setting ' + constraint + ' are not defined')
+            elif constraint == 'SelfCollisionAvoidanceConstraints':
+                try:
+                    self._planner.setSelfCollisionAvoidanceConstraints(self._r_body)
+                except AttributeError:
+                    print('The required attributes for setting ' + constraint + ' are not defined')
+            else:
+                print('No function to set the parameters for this constraint type is defined')
 
     def establish_ros_connections(self):
         self._cmd_pub = rospy.Publisher(
@@ -94,6 +146,10 @@ class MPCNode():
         )
         self._goal_sub = rospy.Subscriber(
             "/mpc/goal", Float64MultiArray, self._goal_cb
+        )
+
+        self._lidar_sub = rospy.Subscriber(
+            "/merged_cloud", PointCloud2, self._lidar_cb
         )
 
     def _goal_cb(self, goal_msg: Float64MultiArray):
@@ -113,7 +169,7 @@ class MPCNode():
             }
         }
         self._goal = GoalComposition(name="goal1", content_dict=goal_dict)
-        self._planner.setGoal(self._goal)
+        self._planner.setGoalReaching(self._goal)
 
 
     def _odom_cb(self, odom_msg: Odometry):
@@ -128,6 +184,37 @@ class MPCNode():
             odom_msg.twist.twist.angular.z,
         ])
 
+    def _lidar_cb(self, msg: PointCloud2):
+        point_cloud_array = []
+
+        # Use pc2.read_points to iterate through the PointCloud2 message
+        for point in pc2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True):
+            point_cloud_array.append([point[0], point[1], point[2]])  # Extract x, y, z coordinates
+
+        # Now, point_cloud_array contains the array of points from the PointCloud2 message
+        # Use this array for further processing or manipulation
+        # Example: print the first 5 points
+        self._lidar_pointcloud = np.array(point_cloud_array)
+
+
+    def compute_constraints(self, robot_state: np.ndarray, point_cloud: np.ndarray) -> Tuple[List, List]:
+        """
+        Computes linear constraints given a pointcloud as numpy array.
+        The seed point is the robot_state.
+        """
+        angle = robot_state[2]
+        rot_matrix = np.array([
+                [np.cos(angle), -np.sin(angle)],
+                [np.sin(angle), np.cos(angle)],
+        ])
+
+        position_lidar = np.dot(rot_matrix, np.array([0.4, 0.0])) + robot_state[0:2]
+        lidar_position = np.array([position_lidar[0], position_lidar[1], 0.02])
+
+        self._fsd.set_position(lidar_position)
+        self._fsd.compute_constraints(point_cloud)
+        return list(self._fsd.asdict().values()), self._fsd.constraints()
+
     def act(self):
         vel_action = self._action * self._dt + self._qudot
         cmd_msg = Twist()
@@ -138,8 +225,22 @@ class MPCNode():
 
     def run(self):
         while not rospy.is_shutdown():
+            if self._lidar_pointcloud is not None:
+                linear_constraints = []
+                halfplanes = []
+                for j in range(self._N):
+                    if not self._output is None and self._exitflag >= 0:
+                        key = "x{:02d}".format(j + 1)
+                        ref_q = self._output[key][0:3]
+                    else:
+                        ref_q = self._q
+                    linear_constraints_j, halfplanes_j = self.compute_constraints(ref_q, self._lidar_pointcloud)
+                    linear_constraints.append(linear_constraints_j)
+                    halfplanes.append(halfplanes_j)
+
+                self._planner.setLinearConstraints(linear_constraints, r_body=self._r_body)
             if self._goal:
-                self._action, _ = self._planner.computeAction(self._q, self._qdot, self._qudot)
+                self._action, self._output, self._exitflag = self._planner.computeAction(self._q, self._qdot, self._qudot)
             #self._action = np.array([1.0, 0.2])
             rospy.loginfo(self._action)
             self.act()
@@ -148,6 +249,7 @@ class MPCNode():
 if __name__ == "__main__":
     try:
         mpc_node = MPCNode()
+        mpc_node._output: Union[dict, None] = None
         mpc_node.run()
     except rospy.ROSInterruptException:
         pass
