@@ -52,7 +52,7 @@ class BoxerMpcExample(MpcExample):
                 "indices": [0, 1],
                 "parent_link": 'origin',
                 "child_link": 'ee_link',
-                "desired_position": [7.5, -2.2],
+                "desired_position": [7, -2.2],
                 "epsilon": 0.4,
                 "type": "staticSubGoal"
             }
