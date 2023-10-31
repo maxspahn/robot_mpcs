@@ -2,18 +2,20 @@
 from typing import Union, Tuple,List
 import numpy as np
 from std_msgs.msg import Float64MultiArray
-from sensor_msgs.msg import PointCloud2
+from sensor_msgs.msg import PointCloud2, LaserScan
 import rospkg
 import sys
 import rospy
 import tf
 import tf2_ros
+import math
 import sensor_msgs.point_cloud2 as pc2
-from geometry_msgs.msg import Pose, Twist
+from geometry_msgs.msg import Pose, Twist, PoseStamped
 from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import Odometry
 import tf2_sensor_msgs
 from ros_bridge.src.robotmpcs_ros.utils.ros_visuals import ROSMarkerPublisher
+from ros_bridge.src.robotmpcs_ros.utils.transformations import quaternion_to_rotation_matrix
 from robotmpcs.planner.mpcPlanner import MPCPlanner
 from mpscenes.goals.goal_composition import GoalComposition
 from mpscenes.obstacles.sphere_obstacle import SphereObstacle
@@ -38,7 +40,7 @@ class MPCNode():
 
     def __init__(self):
         rospy.init_node("mpc_node")
-        self.tf_buffer = tf2_ros.Buffer()
+        self._transform = None
         self.establish_ros_connections()
         self._dt = rospy.get_param('/mpc/time_step')
         self._rate = rospy.Rate(1/self._dt)
@@ -47,9 +49,11 @@ class MPCNode():
         self.set_mpc_parameter()
         self.init_arrays()
         self.init_visuals()
+        self.tf_buffer = tf2_ros.Buffer()
         self.listener = tf.TransformListener()
-        self._translation = [0,0,0]
-        self._rotation= [0,0,0,1]
+
+
+
 
 
     def init_scenario(self):
@@ -166,15 +170,15 @@ class MPCNode():
             "/odometry/filtered", Odometry, self._odom_cb
         )
         self._goal_sub = rospy.Subscriber(
-            "/mpc/goal", Float64MultiArray, self._goal_cb
+            "/mpc/goal", PoseStamped, self._goal_cb
         )
 
         self._lidar_sub = rospy.Subscriber(
-            "/merged_cloud", PointCloud2, self._lidar_cb
+            "/front/scan", LaserScan, self._lidar_cb
         )
 
-    def _goal_cb(self, goal_msg: Float64MultiArray):
-        goal_position = goal_msg.data
+    def _goal_cb(self, goal_msg: PoseStamped):
+        goal_position = [goal_msg.pose.position.x,  goal_msg.pose.position.y]
         if len(goal_position) != 2:
             rospy.logwarn("Goal ignored because of dimension missmatch")
         goal_dict = {
@@ -206,51 +210,42 @@ class MPCNode():
         ])
 
     def _lidar_cb(self, msg: PointCloud2):
-        print(msg.header.frame_id)
+        cloud_points = []
+        angle = msg.angle_min
 
-        while True:
-            point_cloud_array = []
-            try:
-                # Transform the PointCloud2 to the desired frame
+        for r in msg.ranges:
+            # Filter out invalid range values
+            if r > msg.range_min and r < msg.range_max:
+                x = r * math.cos(angle)
+                y = r * math.sin(angle)
+                z = 0.0  # Set z value as 0 (assuming a 2D plane)
 
-                transform = self.tf_buffer.lookup_transform('odom', msg.header.frame_id, rospy.Time(0))
+                cloud_points.append([x, y, z])
+            angle += msg.angle_increment
 
-                #self._translation = transform.transform.translation
-                print('transform')
-                print(transform)
-                break
-
-                #cloud_points = np.array(list(pc2.read_points(msg)))
-
-                #transformed_points = np.dot(cloud_points[:, :3], np.transpose([transform.transform.rotation.x,
-                #                                                               transform.transform.rotation.y,
-                #                                                               transform.transform.rotation.z,
-                 #                                                              transform.transform.rotation.w]))
-                #transformed_points += [transform.transform.translation.x,
-                #                       transform.transform.translation.y,
-                #                       transform.transform.translation.z]
-                #print('transformed')
+        self.listener.waitForTransform("/odom", msg.header.frame_id, rospy.Time(0), rospy.Duration(5))
+        (self._translation, self._rotation) = self.listener.lookupTransform("/odom", msg.header.frame_id, rospy.Time(0))
 
 
-            except Exception as e:
-                rospy.logwarn(f"Could not transform the lidar PointCloud {e}")
-                # Print additional information for debugging
-                print(f"Source frame: {msg.header.frame_id}")
-                print(f"Target frame: odom")
-                print(f"TF tree:\n{self.tf_buffer.all_frames_as_string()}")
-                self._rate.sleep()
+        if self._translation is not None:
+            cloud_points = np.array(cloud_points)
+            print(cloud_points.shape)
+
+            R = quaternion_to_rotation_matrix(self._rotation)
+
+            transformed_points = np.dot(cloud_points[:, :3], R.T)
+            transformed_points += [self._translation[0],
+                                   self._translation[1],
+                                   self._translation[2]]
+            # print('transformed')
+            # Use pc2.read_points to iterate through the PointCloud2 message
+
+            # Now, point_cloud_array contains the array of points from the PointCloud2 message
+            # Use this array for further processing or manipulation
+            # Example: print the first 5 points
 
 
-
-        # Use pc2.read_points to iterate through the PointCloud2 message
-
-        # Now, point_cloud_array contains the array of points from the PointCloud2 message
-        # Use this array for further processing or manipulation
-        # Example: print the first 5 points
-        transformed_cloud = tf2_sensor_msgs.do_transform_cloud(msg, transform)
-        for point in pc2.read_points(transformed_cloud, field_names=("x", "y", "z"), skip_nans=True):
-             point_cloud_array.append([point[0], point[1], point[2]])  # Extract x, y, z coordinates
-        self._lidar_pointcloud = np.array(point_cloud_array)
+            self._lidar_pointcloud = np.array(transformed_points)
 
 
     def compute_constraints(self, robot_state: np.ndarray, point_cloud: np.ndarray) -> Tuple[List, List]:
@@ -258,15 +253,17 @@ class MPCNode():
         Computes linear constraints given a pointcloud as numpy array.
         The seed point is the robot_state.
         """
+
         angle = robot_state[2]
         rot_matrix = np.array([
                 [np.cos(angle), -np.sin(angle)],
                 [np.sin(angle), np.cos(angle)],
         ])
 
-        position_lidar = np.dot(rot_matrix, np.array([0.4, 0.0])) + self._translation[:2]
+        position_lidar = self._translation[:2]
 
-        lidar_position = np.array([position_lidar[0], position_lidar[1], self._translation[2]])
+        lidar_position = np.array([position_lidar[0], position_lidar[1], 0.0])
+        print(position_lidar)
 
         self._fsd.set_position(lidar_position)
         if len(point_cloud)>0:
@@ -282,6 +279,8 @@ class MPCNode():
         self._qudot = vel_action
 
     def run(self):
+
+
         while not rospy.is_shutdown():
             linear_constraints = []
             if self._lidar_pointcloud is not None:
