@@ -311,7 +311,7 @@ class MPCNode():
 
                 self._planner.setLinearConstraints(linear_constraints, r_body=self._r_body)
                 print('linear constraints are set')
-                print(linear_constraints)
+
             if self._goal:
                 self._action, self._output, self._exitflag = self._planner.computeAction(self._q, self._qdot, self._qudot)
                 rospy.loginfo(self._action)
