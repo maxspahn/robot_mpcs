@@ -52,7 +52,7 @@ class BoxerMpcExample(MpcExample):
                 "indices": [0, 1],
                 "parent_link": 'origin',
                 "child_link": 'ee_link',
-                "desired_position": [7.2, -2.2],
+                "desired_position": [7.5, -2.2],
                 "epsilon": 0.4,
                 "type": "staticSubGoal"
             }
@@ -187,7 +187,7 @@ class BoxerMpcExample(MpcExample):
                 plotting_interval=self._plotting_interval,
                 angle_limits=np.array([-np.pi + np.pi/8, -np.pi/8]),
         )
-        val = 40
+        val = 80
         occ_sensor = OccupancySensor(
             limits=np.array([[-10, 10], [-10, 10], [0, 50 / val]]),
             resolution=np.array([val + 1, val + 1, 5], dtype=int),
