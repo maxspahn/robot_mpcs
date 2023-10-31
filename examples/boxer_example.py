@@ -217,11 +217,11 @@ class BoxerMpcExample(MpcExample):
             # ---END: Visualizations---
 
     def check_goal_reaching(self, ob):
-        primary_goal = self._goal.primary_goal()
-        goal_dist = np.linalg.norm(ob['robot_0']['joint_state']['position'][:2] - primary_goal.position()) # todo remove hard coded dimension, replace it with fk instead
-        if goal_dist <= primary_goal.epsilon():
-            return True
-        return False
+            primary_goal = self._goal.primary_goal()
+            goal_dist = np.linalg.norm(ob['robot_0']['joint_state']['position'][:2] - primary_goal.position()) # todo remove hard coded dimension, replace it with fk instead
+            if goal_dist <= primary_goal.epsilon():
+                return True
+            return False
 
 def main():
     boxer_example = BoxerMpcExample(sys.argv[1])
