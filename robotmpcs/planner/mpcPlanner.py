@@ -92,7 +92,7 @@ class MPCPlanner(object):
         for i in range(self._config.time_horizon):
             self._params[
                 [self._npar * i + val for val in self._paramMap["wgoal"]]
-            ] = self._config.weights["w"]
+            ] = self._config.weights["wgoal"]
             # for j, val in enumerate(self._paramMap["wvel"]):
             #     self._params[[self._npar * i + val]] = self._config.weights["wvel"][j]
             self._params[
@@ -199,8 +199,10 @@ class MPCPlanner(object):
             for j in range(self.m()):
                 if j >= len(goal.primary_goal().position()):
                     position = 0
+                    print('no goal')
                 else:
                     position = goal.primary_goal().position()[j]
+                    print('setting goal')
                 self._params[self._npar * i + self._paramMap["goal"][j]] = position
 
     def setConstraintAvoidance(self):

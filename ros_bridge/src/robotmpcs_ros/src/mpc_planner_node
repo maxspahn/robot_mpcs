@@ -6,10 +6,14 @@ from sensor_msgs.msg import PointCloud2
 import rospkg
 import sys
 import rospy
+import tf
+import tf2_ros
 import sensor_msgs.point_cloud2 as pc2
 from geometry_msgs.msg import Pose, Twist
 from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import Odometry
+import tf2_sensor_msgs
+from ros_bridge.src.robotmpcs_ros.utils.ros_visuals import ROSMarkerPublisher
 from robotmpcs.planner.mpcPlanner import MPCPlanner
 from mpscenes.goals.goal_composition import GoalComposition
 from mpscenes.obstacles.sphere_obstacle import SphereObstacle
@@ -34,6 +38,7 @@ class MPCNode():
 
     def __init__(self):
         rospy.init_node("mpc_node")
+        self.tf_buffer = tf2_ros.Buffer()
         self.establish_ros_connections()
         self._dt = rospy.get_param('/mpc/time_step')
         self._rate = rospy.Rate(1/self._dt)
@@ -41,6 +46,11 @@ class MPCNode():
         self.init_planner()
         self.set_mpc_parameter()
         self.init_arrays()
+        self.init_visuals()
+        self.listener = tf.TransformListener()
+        self._translation = [0,0,0]
+        self._rotation= [0,0,0,1]
+
 
     def init_scenario(self):
         self._goal = None
@@ -61,7 +71,18 @@ class MPCNode():
                 [-10, 10],
                 [-10, 10],
         ])
+    def init_visuals(self):
+        self.constr_color = 0
 
+        self.visuals = ROSMarkerPublisher('/mpc_planner_node/visuals', 100)
+
+        self.visual_constraints = self.visuals.get_line('odom')
+        self.visual_constraints.set_scale(0.05)
+        self.visual_constraints.set_color(self.constr_color)
+
+        self.visual_goal = self.visuals.get_circle('odom')
+        self.visual_goal.set_scale(0.4,0.4,0.01)
+        self.visual_goal.set_color(1)
 
     def init_arrays(self):
         self._action = np.zeros(2)
@@ -185,15 +206,50 @@ class MPCNode():
         ])
 
     def _lidar_cb(self, msg: PointCloud2):
-        point_cloud_array = []
+        print(msg.header.frame_id)
+
+        while True:
+            point_cloud_array = []
+            try:
+                # Transform the PointCloud2 to the desired frame
+
+                transform = self.tf_buffer.lookup_transform('odom', msg.header.frame_id, rospy.Time(0))
+
+                #self._translation = transform.transform.translation
+                print('transform')
+                print(transform)
+                break
+
+                #cloud_points = np.array(list(pc2.read_points(msg)))
+
+                #transformed_points = np.dot(cloud_points[:, :3], np.transpose([transform.transform.rotation.x,
+                #                                                               transform.transform.rotation.y,
+                #                                                               transform.transform.rotation.z,
+                 #                                                              transform.transform.rotation.w]))
+                #transformed_points += [transform.transform.translation.x,
+                #                       transform.transform.translation.y,
+                #                       transform.transform.translation.z]
+                #print('transformed')
+
+
+            except Exception as e:
+                rospy.logwarn(f"Could not transform the lidar PointCloud {e}")
+                # Print additional information for debugging
+                print(f"Source frame: {msg.header.frame_id}")
+                print(f"Target frame: odom")
+                print(f"TF tree:\n{self.tf_buffer.all_frames_as_string()}")
+                self._rate.sleep()
+
+
 
         # Use pc2.read_points to iterate through the PointCloud2 message
-        for point in pc2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True):
-            point_cloud_array.append([point[0], point[1], point[2]])  # Extract x, y, z coordinates
 
         # Now, point_cloud_array contains the array of points from the PointCloud2 message
         # Use this array for further processing or manipulation
         # Example: print the first 5 points
+        transformed_cloud = tf2_sensor_msgs.do_transform_cloud(msg, transform)
+        for point in pc2.read_points(transformed_cloud, field_names=("x", "y", "z"), skip_nans=True):
+             point_cloud_array.append([point[0], point[1], point[2]])  # Extract x, y, z coordinates
         self._lidar_pointcloud = np.array(point_cloud_array)
 
 
@@ -208,11 +264,13 @@ class MPCNode():
                 [np.sin(angle), np.cos(angle)],
         ])
 
-        position_lidar = np.dot(rot_matrix, np.array([0.4, 0.0])) + robot_state[0:2]
-        lidar_position = np.array([position_lidar[0], position_lidar[1], 0.02])
+        position_lidar = np.dot(rot_matrix, np.array([0.4, 0.0])) + self._translation[:2]
+
+        lidar_position = np.array([position_lidar[0], position_lidar[1], self._translation[2]])
 
         self._fsd.set_position(lidar_position)
-        self._fsd.compute_constraints(point_cloud)
+        if len(point_cloud)>0:
+            self._fsd.compute_constraints(point_cloud)
         return list(self._fsd.asdict().values()), self._fsd.constraints()
 
     def act(self):
@@ -225,8 +283,8 @@ class MPCNode():
 
     def run(self):
         while not rospy.is_shutdown():
+            linear_constraints = []
             if self._lidar_pointcloud is not None:
-                linear_constraints = []
                 halfplanes = []
                 for j in range(self._N):
                     if not self._output is None and self._exitflag >= 0:
@@ -241,10 +299,36 @@ class MPCNode():
                 self._planner.setLinearConstraints(linear_constraints, r_body=self._r_body)
             if self._goal:
                 self._action, self._output, self._exitflag = self._planner.computeAction(self._q, self._qdot, self._qudot)
-            #self._action = np.array([1.0, 0.2])
             rospy.loginfo(self._action)
             self.act()
+            if self.check_goal_reaching(self._q):
+                print('GOAL REACHED')
+
+            self.visualize(linear_constraints)
             self._rate.sleep()
+
+    def visualize(self,linear_constraints):
+        if len(linear_constraints)>0:
+            for constraint in linear_constraints[0]:
+                self.visual_constraints.add_constraint_line(constraint[:2], -constraint[-1], length=10.0)
+
+        if self._goal is not None:
+            goal_pose = Pose()
+            print(self._goal.primary_goal())
+            goal_pose.position.x = self._goal.primary_goal().position()[0]
+            goal_pose.position.y = self._goal.primary_goal().position()[1]
+            goal_pose.position.z = 0.01
+            self.visual_goal.add_marker(goal_pose)
+        self.visuals.publish()
+
+    def check_goal_reaching(self, q):
+        if self._goal is not None:
+            primary_goal = self._goal.primary_goal()
+            goal_dist = np.linalg.norm(q[:2] - primary_goal.position()) # todo remove hard coded dimension, replace it with fk instead
+            if goal_dist <= primary_goal.epsilon():
+                return True
+            return False
+        return False
 
 if __name__ == "__main__":
     try:

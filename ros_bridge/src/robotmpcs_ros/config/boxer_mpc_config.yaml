@@ -14,10 +14,9 @@ mpc:
     - InputLimitConstraints
   objectives:
     - 'GoalReaching'
-    - 'ConstraintAvoidance'
   weights:
     wgoal: 1.0
-    wvel: [0.0, 0.0, 0.0, 1, 0.01]
+    wvel: [0.0, 0.0, 0.0, 0.0, 0.0]
     ws: 1e10
     wu: 0.01
     wobst: 0.5
