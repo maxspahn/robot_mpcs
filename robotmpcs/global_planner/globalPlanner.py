@@ -37,7 +37,7 @@ class GlobalPlanner(object):
         plt.imsave('occupancy_map.png', self.occupancy_map_2D)
         return sensor
 
-    def get_enlarged_obstacles(self, size_robot=0.5):
+    def get_enlarged_obstacles(self, size_robot=0.4):
         """
         Blurs image to get enlarged obstacles
         be ware that for images the max value is 255
