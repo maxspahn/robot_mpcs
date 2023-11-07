@@ -67,7 +67,7 @@ class MpcExample(object):
         for objective in objectives:
             if objective == 'GoalReaching':
                 try:
-                    self._planner.setGoalReaching(self._goal)
+                    self._planner.setGoalReaching(self._goal.primary_goal().position())
                 except AttributeError:
                     print('The required attributes for setting ' + objective + ' are not defined')
                     sys.exit(1)

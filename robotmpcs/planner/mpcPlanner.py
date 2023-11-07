@@ -194,13 +194,13 @@ class MPCPlanner(object):
                     self._npar * i + self._paramMap["upper_limits_u"][j]
                 ] = limits_u[1][j]
 
-    def setGoalReaching(self, goal):
+    def setGoalReaching(self, goal_position):
         for i in range(self._config.time_horizon):
             for j in range(self.m()):
-                if j >= len(goal.primary_goal().position()):
+                if j >= len(goal_position):
                     position = 0
                 else:
-                    position = goal.primary_goal().position()[j]
+                    position = goal_position[j]
                 self._params[self._npar * i + self._paramMap["goal"][j]] = position
 
     def setConstraintAvoidance(self):

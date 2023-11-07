@@ -1,16 +1,26 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import copy
 from robotmpcs.global_planner.a_star import a_star
 from robotmpcs.global_planner.gridmap import OccupancyGridMap
 
 class GlobalPlanner(object):
-    def __init__(self, dim_pixels, limits_low, limits_high, BOOL_PLOTTING=True, threshold=0.2):
+    def __init__(self, dim_pixels, limits_low, limits_high,
+                 BOOL_PLOTTING=True,
+                 threshold=0.29,
+                 convolution_blur = (5, 5),
+                 enlarge_obstacles=True,
+                 threshold_local_goal=1.3):
         self.dim_pixels = dim_pixels
         self.limits_high = limits_high
         self.limits_low = limits_low
         self.dim_meters = -limits_low + limits_high
         self.cell_size_xyz = self.dim_meters/dim_pixels
         self.threshold = threshold
+        self.enlarge_obstacles = enlarge_obstacles
+        self.convolution_blur = convolution_blur
+        self.idx_local = 0
+        self.threshold_local_goal = threshold_local_goal
 
         # dimension of cell must be the same in x and y direction:
         if self.cell_size_xyz[0] == self.cell_size_xyz[1]:
@@ -25,6 +35,39 @@ class GlobalPlanner(object):
         self.occupancy_map_2D = np.clip(np.sum(occupancy_map_3D, axis=2), 0, self.threshold)
         plt.imsave('occupancy_map.png', self.occupancy_map_2D)
         return sensor
+
+    def get_enlarged_obstacles(self, size_robot=0.4):
+        """
+        Blurs image to get enlarged obstacles
+        be ware that for images the max value is 255
+        """
+        gmap = OccupancyGridMap.from_png('occupancy_map.png', cell_size=self.cell_size)
+        size_robot_pixels = int(np.ceil(size_robot/self.cell_size))
+        self.kernel = np.ones((size_robot_pixels*2+1, size_robot_pixels*2+1))
+        self.occupancy_map_convoluted = self.convolution_size_robot(occ_map=gmap.data, kernel=self.kernel)
+        self.occupancy_map_enlarged = self.create_binary_map(self.occupancy_map_convoluted)
+        return self.occupancy_map_enlarged
+
+    def convolution_size_robot(self, occ_map, kernel):
+        k = int((len(kernel)-1)/2)
+        sum_kernel = np.sum(kernel)
+        occ_map_convoluted = copy.deepcopy(occ_map)
+        for i in range(k, occ_map.shape[0]-k):
+            for j in range(k, occ_map.shape[1]-k):
+                subsample = kernel*occ_map[i-k:i+k+1, j-k:j+k+1]
+                value_pixel = np.sum(subsample)/sum_kernel  #to avoid very large values
+                occ_map_convoluted[i, j] = value_pixel
+        return occ_map_convoluted
+
+    def create_binary_map(self, occ_map):
+        occ_map_enlarged = copy.deepcopy(occ_map)
+        for i in range(occ_map.shape[0]):
+            for j in range(occ_map.shape[1]):
+                if occ_map[i, j]>self.threshold:
+                    occ_map_enlarged[i, j] = 1
+                else:
+                    occ_map_enlarged[i, j] = 0
+        return occ_map_enlarged
 
     def plot_occupancy_map(self):
         """
@@ -93,8 +136,16 @@ class GlobalPlanner(object):
                                   rgba_color=[0.0, 1.0, 1.0, 0.3])
 
     def get_global_path_astar(self, start_pos, goal_pos):
+        # # enlarge obstacles in the map to fill gaps where the robot would not fit:
+        # if self.enlarge_obstacles == True:
+        #     self.get_enlarged_obstacles()
+
         # load the map
         gmap = OccupancyGridMap.from_png('occupancy_map.png', cell_size=self.cell_size)
+
+        # enlarge obstacles in the map to fill gaps where the robot would not fit:
+        if self.enlarge_obstacles == True:
+            gmap.data = self.get_enlarged_obstacles()
 
         # convert coordinates to make sure all (x, y) coordinates are positive and correct wrt the gmap:
         start_pos = self.convert_meters(start_pos)
@@ -114,3 +165,30 @@ class GlobalPlanner(object):
             self.plot_occupancy_map_and_path(path=path_px, gmap=gmap, start_pos=start_pos, goal_pos=goal_pos)
         path_converted = self.convert_path(path)
         return path_converted, path_px
+
+
+    def get_distance_points(self, position1, position2):
+        distance = np.sqrt((position2[0]-position1[0])**2 + (position2[1]-position1[1])**2)
+        return distance
+
+    def get_local_goal(self, position, path):
+        """
+        Gets the local goal on the global path that is closer then x meters
+        - closer then x meters
+        - not going backwards along the path
+        Only update when the final node is not reached.
+        Returns the (x, y) coordinates of the local path
+        """
+        distance_pos_path = self.get_distance_points(position, path[self.idx_local])
+
+        if self.idx_local < len(path)-1 and len(path)>0: #Only update when not at final node
+            if distance_pos_path <= self.threshold_local_goal:
+                self.idx_local = self.idx_local + 1
+
+        local_goal = path[self.idx_local]
+        return local_goal
+
+    # def check_local_goal_stuck(self, time, dt=):
+    #     """
+    #     It might be nice that if the local goal is not reachable, it tries the next one if that is
+    #     """
